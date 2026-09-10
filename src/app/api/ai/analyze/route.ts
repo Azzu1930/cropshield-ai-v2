@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       previousAssessment,
       language = 'en',
       farmId,
+      userId,
     } = body;
 
     if (!cropName) {
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
           .from('assessments')
           .insert({
             farm_id: farmId,
+            ...(userId && !userId.startsWith('farmer-') ? { user_id: userId } : {}),
             crop_name: cropName,
             symptoms: symptoms as any,
             water_level: waterLevel,

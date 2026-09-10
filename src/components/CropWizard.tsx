@@ -325,6 +325,7 @@ export function CropWizard() {
           previousAssessment,
           language,
           farmId: farm?.id,
+          userId: user?.id,
         }),
       });
 
