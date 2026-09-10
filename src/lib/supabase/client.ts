@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-const rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
-const supabaseUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
+function cleanSupabaseUrl(url: string): string {
+  let cleaned = (url || '').trim();
+  cleaned = cleaned.replace(/\/rest\/v1\/?$/, '');
+  cleaned = cleaned.replace(/\/rest\/?$/, '');
+  if (cleaned.endsWith('/')) cleaned = cleaned.slice(0, -1);
+  return cleaned;
+}
+
+const supabaseUrl = cleanSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
 const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
 export const isSupabaseConfigured = Boolean(
