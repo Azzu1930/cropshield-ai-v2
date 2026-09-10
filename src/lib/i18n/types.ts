@@ -235,6 +235,11 @@ export interface TranslationDictionary {
     whyToggle: string;
     expertPrompt: string;
     askExpertBtn: string;
+    expertSubtitle: string;
+    expertModalSubtitle: string;
+    expertQuestionLabel: string;
+    expertPlaceholder: string;
+    submitRequestBtn: string;
     expertSavedNotice: string;
     checkAgainNotice: string;
     listenResult: string;

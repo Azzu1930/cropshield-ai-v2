@@ -17,6 +17,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { VoiceNarrator } from './VoiceNarrator';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
+import { getLocalizedResultContent, translateExplanation } from '@/lib/i18n/agricultural-translations';
 
 interface SimpleResultViewProps {
   result: CropAnalysisResult;
@@ -71,7 +72,7 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
                 : 'Crop Not Detected'}
             </h2>
             <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-              {result.explanation ||
+              {translateExplanation(result.explanation, language) ||
                 (language === 'te'
                   ? 'మీరు అప్‌లోడ్ చేసిన చిత్రంలో వ్యవసాయ పంట లేదా ఆకు గుర్తించబడలేదు. సిస్టమ్ కేవలం పంటలు, ఆకులు మరియు మొక్కల ఫోటోలను మాత్రమే విశ్లేషిస్తుంది. మనుషులు, డ్రాయింగ్‌లు లేదా ఇతర చిత్రాలకు ఎటువంటి సిఫార్సులు ఇవ్వబడవు.'
                   : language === 'hi'
@@ -168,8 +169,46 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
   const badge = getSeriousnessBadge();
   const conf = getConfidenceBadge();
 
-  // Prepare spoken text for Voice Narrator
-  const spokenText = `${result.possibleIssue}. ${t.result.howSeriousTitle}: ${badge.label}. ${t.result.whatShouldIDoTitle}: ${result.actions.join('. ')}. ${t.result.checkAgainNotice}`;
+  // Dynamically resolve localized content based on selected language
+  const localized = getLocalizedResultContent(result, language);
+  const activePossibleIssue = localized.possibleIssue || result.possibleIssue;
+  const activeExplanation = localized.explanation || result.explanation;
+  const activeActions =
+    localized.actions && localized.actions.length > 0
+      ? localized.actions
+      : result.actions;
+  const activeWhyReasons =
+    localized.whyReasons && localized.whyReasons.length > 0
+      ? localized.whyReasons
+      : result.whyReasons;
+  const activeComparison = localized.previousComparison || result.previousComparison;
+
+  // Localized crop name for badge
+  const getLocalizedCropName = (crop: string) => {
+    const c = (crop || '').toLowerCase();
+    if (c.includes('groundnut') || c.includes('వేరుశనగ') || c.includes('मूंगफली')) {
+      return t.wizard.crops.groundnut;
+    }
+    if (c.includes('tomato') || c.includes('టమాట') || c.includes('टमाटर')) {
+      return t.wizard.crops.tomato;
+    }
+    if (c.includes('rice') || c.includes('paddy') || c.includes('వరి') || c.includes('धान')) {
+      return t.wizard.crops.rice;
+    }
+    if (c.includes('chilli') || c.includes('మిరప') || c.includes('मिर्च')) {
+      return t.wizard.crops.chilli;
+    }
+    if (c.includes('cotton') || c.includes('పత్తి') || c.includes('कपास')) {
+      return t.wizard.crops.cotton;
+    }
+    if (c.includes('maize') || c.includes('corn') || c.includes('మొక్కజొన్న') || c.includes('मक्का')) {
+      return t.wizard.crops.maize;
+    }
+    return crop;
+  };
+
+  // Prepare spoken text for Voice Narrator in selected language
+  const spokenText = `${activePossibleIssue}. ${t.result.howSeriousTitle}: ${badge.label}. ${t.result.whatShouldIDoTitle}: ${activeActions.join('. ')}. ${t.result.checkAgainNotice}`;
 
   const handleAskExpertSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,13 +285,13 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
           )}
           <div className="flex-1">
             <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wider mb-1.5">
-              {cropName}
+              {getLocalizedCropName(cropName)}
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-gray-950 leading-snug">
-              {result.possibleIssue}
+              {activePossibleIssue}
             </h2>
             <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-              {result.explanation}
+              {activeExplanation}
             </p>
           </div>
         </div>
@@ -269,20 +308,20 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
         </div>
 
         {/* History Comparison (if previous assessment exists) */}
-        {result.previousComparison && (
+        {activeComparison && (
           <div className="p-4 rounded-2xl bg-blue-50/80 border-2 border-blue-200 space-y-1">
             <p className="text-xs font-bold text-blue-900 uppercase tracking-wider">
               {t.result.comparedWithLast}
             </p>
             <p className="text-sm font-extrabold text-blue-950">
-              {result.previousComparison.status === 'better'
+              {activeComparison.status === 'better'
                 ? t.result.comparisonStatus.better
-                : result.previousComparison.status === 'needs_attention'
+                : activeComparison.status === 'needs_attention'
                 ? t.result.comparisonStatus.needsAttention
                 : t.result.comparisonStatus.same}
             </p>
             <p className="text-xs text-blue-800">
-              {result.previousComparison.explanation}
+              {activeComparison.explanation}
             </p>
           </div>
         )}
@@ -293,7 +332,7 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
             <span>📋</span> {t.result.whatShouldIDoTitle}
           </h3>
           <div className="space-y-3">
-            {result.actions.map((action, idx) => (
+            {activeActions.map((action, idx) => (
               <div
                 key={idx}
                 className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 flex items-start gap-3.5"
@@ -331,7 +370,7 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
 
           {showWhyDetails && (
             <div className="mt-3 p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-2.5 text-xs sm:text-sm text-gray-700 animate-in fade-in">
-              {result.whyReasons.map((reason, idx) => (
+              {activeWhyReasons.map((reason, idx) => (
                 <div key={idx} className="flex items-start gap-2">
                   <span className="text-emerald-600 font-bold">•</span>
                   <span className="font-medium leading-relaxed">{reason}</span>
@@ -368,6 +407,9 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
             <p className="text-sm font-bold text-purple-900 flex items-center justify-center gap-1.5">
               <UserCheck className="w-4 h-4 text-purple-700" />
               <span>{t.result.expertPrompt}</span>
+            </p>
+            <p className="text-xs text-purple-800/80 max-w-sm mx-auto">
+              {t.result.expertSubtitle}
             </p>
             <button
               type="button"
@@ -409,17 +451,17 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
                   <span>{t.result.askExpertBtn}</span>
                 </h3>
                 <p className="text-xs text-gray-500">
-                  An expert from Krishi Vigyan Kendra (KVK) can review your crop symptoms, weather, and photo.
+                  {t.result.expertModalSubtitle}
                 </p>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Any specific question for the expert?
+                    {t.result.expertQuestionLabel}
                   </label>
                   <textarea
                     rows={3}
                     value={farmerNotes}
                     onChange={(e) => setFarmerNotes(e.target.value)}
-                    placeholder="e.g. Can I spray neem oil tomorrow? Will this spread to other plots?"
+                    placeholder={t.result.expertPlaceholder}
                     className="w-full p-3 rounded-xl border border-gray-300 text-sm focus:border-purple-600 focus:outline-none"
                   />
                 </div>
@@ -436,7 +478,7 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
                     disabled={submittingExpert}
                     className="flex-1 py-2.5 rounded-xl bg-purple-700 text-white text-sm font-bold hover:bg-purple-800 disabled:opacity-50"
                   >
-                    {submittingExpert ? t.common.saving : 'Submit Request'}
+                    {submittingExpert ? t.common.saving : t.result.submitRequestBtn}
                   </button>
                 </div>
               </form>

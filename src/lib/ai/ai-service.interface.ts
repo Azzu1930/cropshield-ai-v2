@@ -60,6 +60,21 @@ export interface CropAnalysisResult {
   isPreliminary: boolean;
   aiProvider: string;
   language: SupportedLanguage;
+  translations?: Partial<
+    Record<
+      SupportedLanguage,
+      {
+        possibleIssue: string;
+        explanation: string;
+        whyReasons: string[];
+        actions: string[];
+        previousComparison?: {
+          status: 'better' | 'same' | 'needs_attention';
+          explanation: string;
+        };
+      }
+    >
+  >;
 }
 
 export interface SoilReportParams {

@@ -1,5 +1,6 @@
 import type { AIService, CropAnalysisParams, CropAnalysisResult, SoilReportParams, SoilAnalysisResult } from './ai-service.interface';
 import type { SupportedLanguage } from '../i18n/types';
+import { translateActionText } from '../i18n/agricultural-translations';
 
 export class RuleBasedAIService implements AIService {
   async validateImage(imageDataUrl: string): Promise<{ isValid: boolean; reason?: string; message: string }> {
@@ -10,6 +11,42 @@ export class RuleBasedAIService implements AIService {
   }
 
   async analyzeCrop(params: CropAnalysisParams): Promise<CropAnalysisResult> {
+    const targetLang = params.language || 'en';
+    const enRes = this.evaluateForLanguage(params, 'en');
+    const teRes = this.evaluateForLanguage(params, 'te');
+    const hiRes = this.evaluateForLanguage(params, 'hi');
+
+    const primary = targetLang === 'te' ? teRes : targetLang === 'hi' ? hiRes : enRes;
+
+    return {
+      ...primary,
+      translations: {
+        en: {
+          possibleIssue: enRes.possibleIssue,
+          explanation: enRes.explanation,
+          whyReasons: enRes.whyReasons,
+          actions: enRes.actions,
+          previousComparison: enRes.previousComparison,
+        },
+        te: {
+          possibleIssue: teRes.possibleIssue,
+          explanation: teRes.explanation,
+          whyReasons: teRes.whyReasons,
+          actions: teRes.actions,
+          previousComparison: teRes.previousComparison,
+        },
+        hi: {
+          possibleIssue: hiRes.possibleIssue,
+          explanation: hiRes.explanation,
+          whyReasons: hiRes.whyReasons,
+          actions: hiRes.actions,
+          previousComparison: hiRes.previousComparison,
+        },
+      },
+    };
+  }
+
+  private evaluateForLanguage(params: CropAnalysisParams, lang: SupportedLanguage): CropAnalysisResult {
     const {
       cropName = 'Crop',
       symptoms = [],
@@ -17,7 +54,6 @@ export class RuleBasedAIService implements AIService {
       weatherData,
       farmLocation,
       previousAssessment,
-      language = 'en',
       imageDataUrl,
       imageValidation,
       affectedArea,
@@ -25,6 +61,7 @@ export class RuleBasedAIService implements AIService {
       previousCrop,
     } = params;
 
+    const language = lang;
     const isTe = language === 'te';
     const isHi = language === 'hi';
 
@@ -935,6 +972,6 @@ export class RuleBasedAIService implements AIService {
   }
 
   async translateContent(text: string, targetLang: SupportedLanguage): Promise<string> {
-    return text;
+    return translateActionText(text, targetLang);
   }
 }
