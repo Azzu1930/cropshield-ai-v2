@@ -36,9 +36,12 @@ export function RecentChecksSection() {
       setIsLoading(true);
       const itemsMap = new Map<string, HistoryItem>();
 
-      // 1. First, load from localStorage
+      const scope = user?.id || 'anonymous';
+      const storageKey = `cropshield_history_${scope}`;
+
+      // 1. First, load from user-isolated localStorage
       try {
-        const localRaw = localStorage.getItem('cropshield_history');
+        const localRaw = localStorage.getItem(storageKey);
         if (localRaw) {
           const parsed = JSON.parse(localRaw);
           if (Array.isArray(parsed)) {

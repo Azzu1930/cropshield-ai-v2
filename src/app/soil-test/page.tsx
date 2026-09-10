@@ -35,7 +35,7 @@ export default function SoilTestPage() {
             <span>🧪</span> {t.homeCards.soilTest.title}
           </h1>
           <p className="text-sm font-semibold text-emerald-800 mt-0.5">
-            📍 {farm.name} ({farm.locality})
+            📍 {farm ? `${farm.name} (${farm.locality})` : 'Farm Location'}
           </p>
         </div>
       </div>

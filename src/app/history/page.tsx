@@ -41,10 +41,13 @@ export default function HistoryPage() {
     async function fetchHistory() {
       setIsLoading(true);
       const itemsMap = new Map<string, HistoryItem>();
+      const scope = user?.id || 'anonymous';
+      const storageKey = `cropshield_history_${scope}`;
+      const isDemo = Boolean(user?.isDemo || user?.id === 'demo-farmer-id');
 
-      // 1. Read from localStorage
+      // 1. Read from user-scoped localStorage
       try {
-        const raw = localStorage.getItem('cropshield_history');
+        const raw = localStorage.getItem(storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
@@ -96,8 +99,8 @@ export default function HistoryPage() {
         }
       }
 
-      // If completely empty, supply realistic default samples so the farmer sees the format
-      if (itemsMap.size === 0) {
+      // Only supply default samples if running as the Demo Farmer
+      if (itemsMap.size === 0 && isDemo) {
         const sample: HistoryItem[] = [
           {
             id: 'sample-1',
@@ -187,9 +190,10 @@ export default function HistoryPage() {
     }
 
     const updated = history.filter((item) => item.id !== id);
-    setHistory(updated);
+    const scope = user?.id || 'anonymous';
+    const storageKey = `cropshield_history_${scope}`;
     try {
-      localStorage.setItem('cropshield_history', JSON.stringify(updated));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
     } catch {
       // Ignore
     }

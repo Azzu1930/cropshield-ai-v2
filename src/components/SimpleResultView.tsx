@@ -14,6 +14,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { VoiceNarrator } from './VoiceNarrator';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
 
@@ -26,6 +27,7 @@ interface SimpleResultViewProps {
 
 export function SimpleResultView({ result, cropName, photoPreview, onReset }: SimpleResultViewProps) {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const [showWhyDetails, setShowWhyDetails] = useState(false);
   const [isExpertModalOpen, setIsExpertModalOpen] = useState(false);
   const [farmerNotes, setFarmerNotes] = useState('');
@@ -82,6 +84,26 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
   const handleAskExpertSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmittingExpert(true);
+
+    const scope = user?.id || 'anonymous';
+    const storageKey = `cropshield_expert_reviews_${scope}`;
+    const newRev = {
+      id: `exp-${Date.now()}`,
+      cropName: cropName || 'Field Crop',
+      status: 'pending' as const,
+      farmerNotes: farmerNotes || 'Farmer requested review from KVK scientist',
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const list = raw ? JSON.parse(raw) : [];
+      list.unshift(newRev);
+      localStorage.setItem(storageKey, JSON.stringify(list));
+    } catch {
+      // Ignore
+    }
+
     try {
       await fetch('/api/expert-review', {
         method: 'POST',
@@ -89,6 +111,8 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
         body: JSON.stringify({
           assessmentId: (result as any).id || `eval-${Date.now()}`,
           farmerNotes,
+          cropName,
+          userId: user?.id,
         }),
       });
       setExpertSubmitted(true);

@@ -7,8 +7,8 @@ export * from './rule-based-service';
 export * from './gemini-service';
 
 export function getAIService(): AIService {
-  const provider = (process.env.AI_PROVIDER || 'rule-based').toLowerCase();
-  if (provider === 'gemini' && process.env.GEMINI_API_KEY) {
+  const provider = (process.env.AI_PROVIDER || '').toLowerCase();
+  if (process.env.GEMINI_API_KEY && provider !== 'rule-based') {
     return new GeminiAIService();
   }
   return new RuleBasedAIService();

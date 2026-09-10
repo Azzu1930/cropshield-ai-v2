@@ -341,6 +341,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     localStorage.removeItem('cropshield_active_user');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('farmChanged'));
+    }
   };
 
   return (

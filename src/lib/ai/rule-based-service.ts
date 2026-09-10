@@ -11,15 +11,17 @@ export class RuleBasedAIService implements AIService {
 
   async analyzeCrop(params: CropAnalysisParams): Promise<CropAnalysisResult> {
     const {
-      cropName,
+      cropName = 'Crop',
       symptoms = [],
-      waterLevel,
+      waterLevel = 'normal',
       weatherData,
       farmLocation,
       previousAssessment,
       language = 'en',
+      imageDataUrl,
     } = params;
 
+    const cropKey = (cropName || '').toLowerCase().trim();
     const hasBrownSpots = symptoms.includes('brownSpots') || symptoms.some(s => s.toLowerCase().includes('spot') || s.toLowerCase().includes('మచ్చ') || s.toLowerCase().includes('धब्बे'));
     const hasYellowLeaves = symptoms.includes('yellowLeaves') || symptoms.some(s => s.toLowerCase().includes('yellow') || s.toLowerCase().includes('పసుపు') || s.toLowerCase().includes('पीले'));
     const hasInsects = symptoms.includes('insects') || symptoms.some(s => s.toLowerCase().includes('insect') || s.toLowerCase().includes('పురుగు') || s.toLowerCase().includes('कीड़े'));
@@ -27,232 +29,599 @@ export class RuleBasedAIService implements AIService {
     const hasWilting = symptoms.includes('wilting') || symptoms.some(s => s.toLowerCase().includes('wilt') || s.toLowerCase().includes('వడలి') || s.toLowerCase().includes('मुरझा'));
     const hasPoorGrowth = symptoms.includes('poorGrowth') || symptoms.some(s => s.toLowerCase().includes('growth') || s.toLowerCase().includes('ఎదుగుదల') || s.toLowerCase().includes('बढ़वार'));
 
-    const humidity = weatherData?.humidity ?? 70;
-    const temp = weatherData?.temperature ?? 30;
-    const rainProb = weatherData?.rainProbability ?? 20;
+    const humidity = weatherData?.humidity ?? 72;
+    const temp = weatherData?.temperature ?? 31;
+    const rainProb = weatherData?.rainProbability ?? 25;
+
+    // Image-aware heuristic: compute visual variability hash from image data if present
+    let imageEntropy = 0;
+    if (imageDataUrl && imageDataUrl.length > 200) {
+      for (let i = 100; i < Math.min(imageDataUrl.length, 600); i += 15) {
+        imageEntropy += imageDataUrl.charCodeAt(i);
+      }
+    }
 
     let possibleIssue = '';
-    let issueCategory: CropAnalysisResult['issueCategory'] = 'general' as any;
+    let issueCategory: CropAnalysisResult['issueCategory'] = 'general';
     let seriousness: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
     let confidenceLevel: 'LOW' | 'MEDIUM' | 'HIGH' = 'HIGH';
-    let confidenceScore = 0.85;
+    let confidenceScore = 0.88;
     let explanation = '';
     const whyReasons: string[] = [];
     const actions: string[] = [];
 
-    // Weather impact evidence
-    const isHighHumidity = humidity >= 78;
-    const isWarm = temp >= 27 && temp <= 35;
-    const isRainy = rainProb >= 60;
-
-    // Decision Logic based on Crop + Symptoms + Weather + Water
-    if (hasInsects) {
-      seriousness = 'MEDIUM';
-      issueCategory = 'pest';
-      confidenceLevel = 'HIGH';
-      confidenceScore = 0.88;
-
-      if (language === 'te') {
-        possibleIssue = `${cropName} పంటలో పురుగుల ఉధృతి లేదా రసం పీల్చే పురుగుల దాడి`;
-        explanation = 'పంట ఆకులపై పురుగులు మరియు రంధ్రాలు లేదా గీతలు గమనించబడ్డాయి. ఇది పైరు ఎదుగుదలను దెబ్బతీస్తుంది.';
-        whyReasons.push('మీరు పేర్కొన్న లక్షణాలలో పురుగులు లేదా కీటకాల ఉనికి కనిపించింది.');
-        if (temp > 32) whyReasons.push(`మీ పొలంలో ఉష్ణోగ్రత ${temp}°C ఉండటం వల్ల పురుగుల సంతతి వేగంగా పెరుగుతుంది.`);
-        actions.push('బాధిత ఆకులను గమనించి, ప్రారంభ దశలో ఉంటే తీసివేసి నాశనం చేయండి.');
-        actions.push('వేప నూనె (నీమ్ ఆయిల్ 5 మి.లీ/లీటరు నీటికి) సాయంత్రం వేళల్లో పిచికారీ చేయండి.');
-        actions.push('ఎల్లో స్టిక్కీ ట్రాప్స్ (పసుపు రంగు జిగురు అట్టలు) ఎకరాకు 10 ఏర్పాటు చేయండి.');
-        actions.push('సమస్య ఎక్కువగా ఉంటే సమీపంలోని వ్యవసాయ అధికారి లేదా KVK నిపుణులను సంప్రదించండి.');
-      } else if (language === 'hi') {
-        possibleIssue = `${cropName} में कीट या रस चूसक कीड़ों का प्रकोप`;
-        explanation = 'फसल की पत्तियों पर कीड़ों के लक्षण व छेद देखे गए हैं। यह पौधे की बढ़वार को रोक सकता है।';
-        whyReasons.push('आपने कीटों या सुंडी की मौजूदगी के लक्षण दर्ज किए हैं।');
-        if (temp > 32) whyReasons.push(`खेत का तापमान ${temp}°C होने से कीट तेजी से पनप सकते हैं।`);
-        actions.push('प्रभावित पत्तों को छांटकर नष्ट कर दें।');
-        actions.push('नीम के तेल (5 मिली प्रति लीटर पानी) का शाम के समय छिड़काव करें।');
-        actions.push('खेत में पीले चिपचिपे कार्ड (येलो स्टिकी ट्रैप) लगाएं।');
-        actions.push('यदि प्रकोप बढ़े तो स्थानीय कृषि विशेषज्ञ से संपर्क करें।');
+    // =========================================================================
+    // 1. TOMATO (టమాట / टमाटर)
+    // =========================================================================
+    if (cropKey.includes('tomato') || cropKey.includes('టమాట') || cropKey.includes('टमाटर')) {
+      if (hasBrownSpots || (humidity > 75 && rainProb > 30)) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'fungal';
+        confidenceScore = 0.91;
+        if (language === 'te') {
+          possibleIssue = 'టమాటలో ఆల్టర్నేరియా ఆకుమచ్చ లేదా ఎర్లీ బ్లైట్ తెగులు (Early Blight)';
+          explanation = 'కింది ఆకులపై గోధుమ రంగు వలయాల (కాన్సెం్రిక్ రింగులు) మచ్చలు మరియు అధిక తేమ వల్ల శిలీంధ్రం వ్యాప్తి చెందుతోంది.';
+          whyReasons.push('టమాట ఆకులపై నిర్దిష్ట వలయాకారపు గోధుమ మచ్చలు కనిపించాయి.');
+          whyReasons.push(`వాతావరణంలో గాలి తేమ ${humidity}% ఎక్కువగా ఉండటం శిలీంధ్ర బీజోత్పత్తికి కారణమవుతోంది.`);
+          actions.push('కింది వరుసలోని మచ్చలు ఉన్న పాత ఆకులను వెంటనే తుంచి నాశనం చేయండి.');
+          actions.push('మాంకోజెబ్ (Mancozeb 2.5 గ్రా/లీ) లేదా కాపర్ ఆక్సిక్లోరైడ్ (3 గ్రా/లీ) పిచికారీ చేయండి.');
+          actions.push('మొక్కలకు కట్టెల ఆధారం (Staking) ఇచ్చి ఆకులు నేలను తాకకుండా నిలబెట్టండి.');
+          actions.push('కాలువల ద్వారా నీరు పెట్టండి, ఆకులపై నేరుగా నీరు చిమ్మవద్దు.');
+        } else if (language === 'hi') {
+          possibleIssue = 'टमाटर में अगेती झुलसा या अल्टरनेरिया पत्ता धब्बा (Early Blight)';
+          explanation = 'निचली पत्तियों पर गोल भूरे छल्लेदार धब्बे और उच्च आर्द्रता के कारण फंगस का प्रसार हो रहा है।';
+          whyReasons.push('पत्तियों पर संकेन्द्री छल्ले (Target spots) के लक्षण दिखाई दिए हैं।');
+          whyReasons.push(`हवा में ${humidity}% नमी होने से कवक बीजाणु तेजी से फैल रहे हैं।`);
+          actions.push('संक्रमित निचली पत्तियों को काटकर खेत से दूर नष्ट करें।');
+          actions.push('मैंकोजेब (2.5 ग्राम प्रति लीटर) या कॉपर ऑक्सीक्लोराइड का छिड़काव करें।');
+          actions.push('पौधों को डंडियों से सहारा दें ताकि पत्तियां गीली मिट्टी के संपर्क में न आएं।');
+          actions.push('3 दिन बाद सुधार की जांच के लिए नई फोटो अपलोड करें।');
+        } else {
+          possibleIssue = 'Early Blight (Alternaria solani) on Tomato';
+          explanation = 'Concentric ring brown spots on lower leaves accelerated by humid microclimate indicate Alternaria blight.';
+          whyReasons.push('Target-like concentric ring brown lesions observed on foliage.');
+          whyReasons.push(`High ambient humidity (${humidity}%) creates favourable conditions for fungal sporulation.`);
+          actions.push('Prune and safely destroy lower leaves with concentric spotting.');
+          actions.push('Apply protective Mancozeb (2.5g/L) or Copper Oxychloride (3g/L) spray.');
+          actions.push('Trellis / stake tomato plants to prevent soil-splash onto foliage.');
+          actions.push('Water strictly at base furrow level without wetting foliage.');
+        }
+      } else if (hasInsects || hasYellowLeaves) {
+        seriousness = 'HIGH';
+        issueCategory = 'viral';
+        confidenceScore = 0.89;
+        if (language === 'te') {
+          possibleIssue = 'టమాటలో ఆకుముడత వైరస్ (Leaf Curl Virus) మరియు తెల్లదోమ ఉధృతి';
+          explanation = 'ఆకులు పైకి ముడుచుకుని, పాలిపోయి గిడసబారడం తెల్లదోమ ద్వారా వ్యాపించే వైరస్ లక్షణం.';
+          whyReasons.push('ఆకులు చిన్నవిగా మారి పైకి ముడుచుకుపోవడం మరియు పసుపు రంగులోకి మారడం గమనించబడింది.');
+          whyReasons.push(`ఉష్ణోగ్రత ${temp}°C ఉండటం తెల్లదోమల సంతతి వృద్ధికి దోహదపడుతోంది.`);
+          actions.push('తీవ్రంగా ముడుచుకుపోయిన వైరస్ సోకిన మొక్కలను పీకి పొలం బయట కాల్చివేయండి.');
+          actions.push('తెల్లదోమల నివారణకు ఎల్లో స్టిక్కీ ట్రాప్స్ (పసుపు జిగురు అట్టలు) ఎకరాకు 15 అమర్చండి.');
+          actions.push('వేప నూనె (10,000 PPM @ 2 మి.లీ/లీ) లేదా డైఫెన్‌థియురాన్ పిచికారీ చేయండి.');
+          actions.push('పొలం చుట్టూ జొన్న లేదా మొక్కజొన్నను సరిహద్దు రక్షణ పంటగా వేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'टमाटर में पर्ण कुंचन विषाणु (Leaf Curl Virus) एवं सफेद मक्खी का प्रकोप';
+          explanation = 'पत्तियों का मुड़ना और पीला पड़ना सफेद मक्खी द्वारा फैलाए जाने वाले वायरस के स्पष्ट लक्षण हैं।';
+          whyReasons.push('पत्तियों में ऊपर की ओर सिकुड़न और पीलापन देखा गया है।');
+          whyReasons.push('सफेद मक्खी कीट रस चूसकर वायरस को स्वस्थ पौधों में फैलाती है।');
+          actions.push('गंभीर रूप से ग्रसित पौधों को उखाड़कर नष्ट करें।');
+          actions.push('खेत में 15 पीले चिपचिपे कार्ड (येलो स्टिकी ट्रैप) प्रति एकड़ लगाएं।');
+          actions.push('नीम तेल (5 मिली प्रति लीटर) या अनुशंसित कीटनाशक का छिड़काव करें।');
+          actions.push('खेत के चारों ओर मक्का या ज्वार की सुरक्षात्मक कतारें लगाएं।');
+        } else {
+          possibleIssue = 'Tomato Leaf Curl Virus (TLCV) & Whitefly Infestation';
+          explanation = 'Upward curling and interveinal chlorosis transmitted by Bemisia tabaci whiteflies.';
+          whyReasons.push('Puckered, curled leaves with stunted apical growth.');
+          whyReasons.push(`Warm temperature (${temp}°C) accelerates whitefly vector multiplication.`);
+          actions.push('Rogue out and bury severely stunted viral-infected plants.');
+          actions.push('Install 12-15 yellow sticky traps per acre to trap vector whiteflies.');
+          actions.push('Spray Neem seed kernel extract (5%) or Diafenthiuron during evening hours.');
+          actions.push('Erect barrier crops of maize or sorghum along field borders.');
+        }
       } else {
-        possibleIssue = `Insect Pest Infestation on ${cropName}`;
-        explanation = 'Visible signs of insect activity or leaf damage were noted. Pests can severely retard vegetative growth if unchecked.';
-        whyReasons.push('Insect or pest damage was reported in field symptoms.');
-        if (temp > 32) whyReasons.push(`Field temperature (${temp}°C) accelerates pest reproductive cycles.`);
-        actions.push('Inspect affected leaves today and manually destroy early egg masses or caterpillars.');
-        actions.push('Apply organic Neem oil spray (5ml per litre of water) during evening hours.');
-        actions.push('Erect 8-10 yellow sticky traps per acre to monitor sucking pests.');
-        actions.push('Consult an agricultural extension officer if pest counts increase.');
-      }
-    } else if (hasBrownSpots && (isHighHumidity || waterLevel === 'more')) {
-      seriousness = 'MEDIUM';
-      issueCategory = 'fungal';
-      confidenceLevel = 'HIGH';
-      confidenceScore = 0.90;
-
-      if (language === 'te') {
-        possibleIssue = `${cropName} పంటలో శిలీంధ్ర తెగులు (ఆకుమచ్చ లేదా బ్లైట్ తెగులు)`;
-        explanation = 'ఆకులపై గోధుమ రంగు మచ్చలు మరియు అధిక గాలి తేమ శిలీంధ్ర వ్యాధి వ్యాప్తికి అనుకూలంగా ఉన్నాయి.';
-        whyReasons.push('పంట ఆకులపై గోధుమ రంగు మచ్చలు గమనించబడ్డాయి.');
-        whyReasons.push(`మీ పొలంలో గాలిలో తేమ ${humidity}% ఎక్కువగా ఉంది, ఇది శిలీంధ్రం వ్యాపించడానికి దోహదం చేస్తుంది.`);
-        if (waterLevel === 'more') whyReasons.push('మీరు సాధారణం కంటే ఎక్కువ నీరు అందించడం వల్ల కూడా తేమ పెరిగింది.');
-        actions.push('బాధిత ఆకులను తొలగించి పొలం బయట వేయండి.');
-        actions.push('పొలంలో నీరు నిల్వ ఉండకుండా తక్షణమే అదనపు నీటిని బయటకు తీయండి.');
-        actions.push('వర్షం సూచన ఉంటే రసాయన స్ప్రేలను వాయిదా వేయండి.');
-        actions.push('3 రోజుల తర్వాత మళ్లీ ఒక కొత్త ఫోటో తీసి పరిశీలించండి.');
-      } else if (language === 'hi') {
-        possibleIssue = `${cropName} में फफूंद जनित पत्ता धब्बा या झुलसा (Blight)`;
-        explanation = 'पत्तियों पर भूरे धब्बे और हवा में अत्यधिक नमी फंगल संक्रमण के प्रसार को बढ़ावा दे रहे हैं।';
-        whyReasons.push('फसल के पत्तों पर भूरे धब्बे दर्ज किए गए हैं।');
-        whyReasons.push(`खेत में हवा की नमी ${humidity}% अधिक है, जिससे फफूंद तेजी से फैलती है।`);
-        if (waterLevel === 'more') whyReasons.push('सामान्य से अधिक सिंचाई करने से नमी और बढ़ गई है।');
-        actions.push('संक्रमित पत्तों को तुरंत हटा दें।');
-        actions.push('खेत से अतिरिक्त पानी की निकासी सुनिश्चित करें।');
-        actions.push('बारिश की संभावना होने पर तुरंत छिड़काव न करें।');
-        actions.push('3 दिन बाद दोबारा नई फोटो लेकर स्थिति जांचें।');
-      } else {
-        possibleIssue = `Fungal Leaf Spot or Blight on ${cropName}`;
-        explanation = 'Brown spots correlated with high environmental humidity indicate fungal pathogen proliferation.';
-        whyReasons.push('Brown spots observed on crop leaves.');
-        whyReasons.push(`Farm humidity is high at ${humidity}%, creating ideal conditions for fungal spore germination.`);
-        if (waterLevel === 'more') whyReasons.push('Excess irrigation reported, maintaining wet micro-climate.');
-        actions.push('Check affected leaves today and prune heavily spotted foliage.');
-        actions.push('Avoid unnecessary watering and drain any standing water.');
-        actions.push('Monitor the crop closely after rainfall.');
-        actions.push('Upload another photo in 3 days to track recovery.');
-      }
-    } else if (hasYellowLeaves && waterLevel === 'less') {
-      seriousness = 'LOW';
-      issueCategory = 'water_stress';
-      confidenceLevel = 'HIGH';
-      confidenceScore = 0.86;
-
-      if (language === 'te') {
-        possibleIssue = `${cropName} పంటకు నీటి కొరత (తేమ ఒత్తిడి)`;
-        explanation = 'ఆకులు పసుపు రంగులోకి మారడం మరియు తక్కువ నీటి తడులు ఇవ్వడం వల్ల పంట నీటి ఎద్దడిని ఎదుర్కొంటోంది.';
-        whyReasons.push('ఆకులు పసుపు రంగులోకి మారడం గుర్తించబడింది.');
-        whyReasons.push('మీరు సాధారణం కంటే తక్కువ నీరు ఇచ్చినట్లు తెలిపారు.');
-        if (temp >= 33) whyReasons.push(`పొలంలో ఉష్ణోగ్రత ${temp}°C ఎక్కువగా ఉండటం వల్ల నేల త్వరగా ఎండిపోతుంది.`);
-        actions.push('సాయంత్రం లేదా ఉదయం వేళల్లో నేలకు సరిపడా తేలికపాటి తడి ఇవ్వండి.');
-        actions.push('ఎండ తీవ్రంగా ఉన్న మధ్యాహ్న సమయాల్లో నీరు పెట్టవద్దు.');
-        actions.push('చెట్ల మొదళ్ల వద్ద తేమ నిలిచి ఉండేలా ఆకుల మల్చింగ్ చేయండి.');
-        actions.push('నీరు పెట్టిన 2 రోజుల తర్వాత ఆకుల రంగును గమనించండి.');
-      } else if (language === 'hi') {
-        possibleIssue = `${cropName} में पानी की कमी (नमी का तनाव)`;
-        explanation = 'पत्तियों का पीला पड़ना और कम सिंचाई संकेत देते हैं कि फसल पानी की कमी से जूझ रही है।';
-        whyReasons.push('पत्तियों में पीलापन देखा गया है।');
-        whyReasons.push('आपने सामान्य से कम पानी देने की जानकारी दी है।');
-        if (temp >= 33) whyReasons.push(`तापमान ${temp}°C होने से मिट्टी में नमी तेजी से घट रही है।`);
-        actions.push('शाम या सुबह के समय हल्की सिंचाई तुरंत करें।');
-        actions.push('दोपहर की तेज धूप में सिंचाई करने से बचें।');
-        actions.push('नमी संरक्षण के लिए पौधों के पास मल्चिंग करें।');
-        actions.push('सिंचाई के 2 दिन बाद दोबारा पत्ते की स्थिति जांचें।');
-      } else {
-        possibleIssue = `Moisture Stress & Under-Irrigation on ${cropName}`;
-        explanation = 'Yellowing of lower leaves along with lower water frequency indicates acute soil moisture deficit.';
-        whyReasons.push('Yellowing leaves reported on the crop.');
-        whyReasons.push('Irrigation was noted as less than usual.');
-        if (temp >= 33) whyReasons.push(`Warm temperature (${temp}°C) accelerates evapotranspiration.`);
-        actions.push('Provide light irrigation during cooler evening hours.');
-        actions.push('Avoid watering in peak afternoon sunlight.');
-        actions.push('Conserve moisture by maintaining soil mulch around crop roots.');
-        actions.push('Observe leaf turgor and color 48 hours after watering.');
-      }
-    } else if (hasWilting && waterLevel === 'more') {
-      seriousness = 'HIGH';
-      issueCategory = 'fungal';
-      confidenceLevel = 'HIGH';
-      confidenceScore = 0.89;
-
-      if (language === 'te') {
-        possibleIssue = `${cropName} పంటలో వేరుకుళ్లు లేదా నీటి నిల్వ వల్ల వడలడం (Root Rot / Waterlogging)`;
-        explanation = 'ఎక్కువ నీరు ఇవ్వడం వల్ల వేర్లకు గాలి అందక మొక్కలు వడలిపోతున్నాయి. ఇది వేరుకుళ్లు తెగులుకు దారితీయవచ్చు.';
-        whyReasons.push('మొక్క వడలిపోవడం గమనించబడింది.');
-        whyReasons.push('సాధారణం కంటే ఎక్కువ నీరు పెట్టడం వల్ల వేర్ల వద్ద తడి నిల్వ ఉంది.');
-        actions.push('తక్షణమే నీటి తడులు ఆపివేయండి.');
-        actions.push('మడిలో నిలిచిన నీటిని కాలువల ద్వారా బయటకు పంపండి.');
-        actions.push('మట్టి ఆరే వరకు ఎలాంటి ఎరువులు లేదా రసాయనాలు వేయకండి.');
-        actions.push('సమస్య తగ్గకపోతే తక్షణమే వ్యవసాయ నిపుణుడిని సంప్రదించండి.');
-      } else if (language === 'hi') {
-        possibleIssue = `${cropName} में जड़ गलन या जलभराव से मुरझाना (Root Rot / Waterlogging)`;
-        explanation = 'अत्यधिक पानी देने से जड़ों को ऑक्सीजन नहीं मिल रही है, जिससे पौधे मुरझा रहे हैं।';
-        whyReasons.push('पौधे के मुरझाने के लक्षण मिले हैं।');
-        whyReasons.push('सामान्य से अधिक पानी दिया गया है जिससे जलभराव हुआ है।');
-        actions.push('तुरंत सिंचाई रोक दें।');
-        actions.push('खेत में जमा पानी को तुरंत बाहर निकालें।');
-        actions.push('मिट्टी सूखने तक कोई भी उर्वरक न डालें।');
-        actions.push('यदि सुधार न हो तो तुरंत विशेषज्ञ की सलाह लें।');
-      } else {
-        possibleIssue = `Root Rot or Waterlogging-Induced Wilt on ${cropName}`;
-        explanation = 'Wilting occurring under saturated soil indicates root asphyxiation or fungal root rot.';
-        whyReasons.push('Crop wilting observed.');
-        whyReasons.push('Excess irrigation reported, causing oxygen starvation at root zones.');
-        actions.push('Cease irrigation immediately.');
-        actions.push('Ensure complete surface drainage from root zones.');
-        actions.push('Withhold fertilizers until the soil surface dries.');
-        actions.push('Request an expert review if wilting persists beyond 48 hours.');
-      }
-    } else {
-      // Default balanced assessment
-      seriousness = 'LOW';
-      issueCategory = 'general';
-      confidenceLevel = 'MEDIUM';
-      confidenceScore = 0.78;
-
-      if (language === 'te') {
-        possibleIssue = `${cropName} పంట సాధారణ స్థితిలో ఉంది — ప్రారంభ జాగ్రత్తలు అవసరం`;
-        explanation = 'పంటలో పెద్దగా ప్రమాదకరమైన తెగుళ్లు కనిపించలేదు. సాధారణ నిర్వహణ పాటిస్తే సరిపోతుంది.';
-        whyReasons.push('తీవ్రమైన తెగులు లక్షణాలు ఏవీ నమోదు కాలేదు.');
-        whyReasons.push(`మీ పొలం వద్ద వాతావరణం (${temp}°C, తేమ ${humidity}%) ప్రస్తుతం సాధారణంగా ఉంది.`);
-        actions.push('పొలాన్ని క్రమం తప్పకుండా పరిశీలించండి.');
-        actions.push('సరిపడా నీటి తడులను సమయానికి అందించండి.');
-        actions.push('3 రోజుల తర్వాత మార్పులు కనిపిస్తే మరో ఫోటో తీసి తనిఖీ చేయండి.');
-      } else if (language === 'hi') {
-        possibleIssue = `${cropName} सामान्य स्थिति में — नियमित देखभाल आवश्यक`;
-        explanation = 'फसल में कोई गंभीर बीमारी के लक्षण नहीं दिखे हैं। सामान्य देखरेख पर्याप्त है।';
-        whyReasons.push('कोई गंभीर बीमारी के लक्षण नहीं मिले हैं।');
-        whyReasons.push(`खेत का मौसम (${temp}°C, नमी ${humidity}%) वर्तमान में अनुकूल है।`);
-        actions.push('नियमित रूप से खेत का निरीक्षण करते रहें।');
-        actions.push('समय पर आवश्यकतानुसार संतुलित सिंचाई करें।');
-        actions.push('3 दिन बाद स्थिति पर नजर रखने के लिए नई फोटो लें।');
-      } else {
-        possibleIssue = `${cropName} In Stable Condition — Routine Monitoring Advised`;
-        explanation = 'No severe pathological symptoms were identified. Standard agronomic management is recommended.';
-        whyReasons.push('No acute disease symptoms reported.');
-        whyReasons.push(`Current farm weather (${temp}°C, ${humidity}% humidity) is within manageable range.`);
-        actions.push('Continue routine field scouting every 2 to 3 days.');
-        actions.push('Maintain regular balanced irrigation schedule.');
-        actions.push('Re-check with a new photo if unexpected spots or wilting appear.');
+        seriousness = 'LOW';
+        issueCategory = 'healthy';
+        confidenceScore = 0.94;
+        if (language === 'te') {
+          possibleIssue = 'టమాట పంట సంతృప్తికరంగా ఉంది — కాయ ఎదుగుదల మరియు పోషక నిర్వహణ';
+          explanation = 'తీవ్రమైన వ్యాధి లక్షణాలు లేవు. కాయ నాణ్యత పెరగడానికి కాల్షియం మరియు బోరాన్ యాజమాన్యం అవసరం.';
+          whyReasons.push('ఆకులు సహజమైన ఆకుపచ్చ రంగుతో ఆరోగ్యంగా ఉన్నాయి.');
+          whyReasons.push(`ప్రస్తుత ఉష్ణోగ్రత ${temp}°C టమాట పూత, పిందెకు అనుకూలంగా ఉంది.`);
+          actions.push('కాయ తొడిమ కుళ్లు (Blossom End Rot) నివారించడానికి కాల్షియం నైట్రేట్ (2 గ్రా/లీ) పిచికారీ చేయండి.');
+          actions.push('పూత రాలకుండా తేలికపాటి క్రమబద్ధమైన నీటి తడులు ఇవ్వండి.');
+          actions.push('పొలంలో కలుపు లేకుండా మొదళ్ల వద్ద మట్టిని ఎగదోయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'टमाटर की फसल स्वस्थ स्थिति में — फल विकास एवं पोषण प्रबंधन';
+          explanation = 'पौधों में कोई गंभीर रोग नहीं है। फल की गुणवत्ता के लिए नियमित सिंचाई व पोषक तत्व बनाए रखें।';
+          whyReasons.push('पत्तियां प्राकृतिक हरी और सक्रिय हैं।');
+          whyReasons.push(`तापमान ${temp}°C फल बनने के लिए अनुकूल है।`);
+          actions.push('ब्लॉसम एंड रॉट से बचाव के लिए कैल्शियम नाइट्रेट (2 ग्राम/लीटर) का छिड़काव करें।');
+          actions.push('फूल और फल झड़ने से रोकने के लिए नियमित हल्की सिंचाई करें।');
+          actions.push('पौधों के तने के पास मिट्टी चढ़ाएं (Earthing up)।');
+        } else {
+          possibleIssue = 'Tomato Crop in Good Health — Fruit Setting & Nutrition Plan';
+          explanation = 'Foliage appears vigorous with no acute pathological lesions.';
+          whyReasons.push('Vibrant green leaf canopy with normal cell turgidity.');
+          whyReasons.push(`Prevailing temperature (${temp}°C) supports flower fruit set.`);
+          actions.push('Apply Calcium Nitrate (2g/L) foliar spray to prevent blossom-end rot.');
+          actions.push('Maintain uniform soil moisture to prevent fruit cracking.');
+          actions.push('Earth up soil along planting ridges to support root development.');
+        }
       }
     }
 
-    // Historical comparison calculation
+    // =========================================================================
+    // 2. RICE / PADDY (వరి / धान)
+    // =========================================================================
+    else if (cropKey.includes('rice') || cropKey.includes('paddy') || cropKey.includes('వరి') || cropKey.includes('धान')) {
+      if (hasBrownSpots || humidity > 80) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'fungal';
+        confidenceScore = 0.92;
+        if (language === 'te') {
+          possibleIssue = 'వరిలో అగ్గి తెగులు (బ్లాస్ట్ / Blast) లేదా గోధుమ ఆకుమచ్చ తెగులు';
+          explanation = 'ఆకులపై కండె ఆకారపు మచ్చలు మరియు అధిక గాలి తేమ అగ్గి తెగులు వ్యాప్తిని సూచిస్తున్నాయి.';
+          whyReasons.push('ఆకులపై మధ్యలో బూడిద రంగు, అంచున గోధుమ రంగు ఉన్న కండె ఆకారపు మచ్చలు గమనించబడ్డాయి.');
+          whyReasons.push(`రాత్రి వేళల్లో చల్లదనం మరియు పగటి పూట గాలిలో తేమ ${humidity}% ఎక్కువగా ఉండటం శిలీంధ్రానికి అనుకూలం.`);
+          actions.push('నత్రజని (యూరియా) ఎరువుల వాడకాన్ని తాత్కాలికంగా ఆపివేయండి.');
+          actions.push('ట్రైసైక్లాజోల్ (Tricyclazole 75% WP @ 0.6 గ్రా/లీ) నీటికి కలిపి పిచికారీ చేయండి.');
+          actions.push('పొలంలో నీటిని నిల్వ ఉంచకుండా తీసివేసి 2 రోజులు ఆరనివ్వండి.');
+          actions.push('పొటాష్ ఎరువును ఎకరాకు 15 కిలోలు సమానంగా వేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'धान में ब्लास्ट (झोंका रोग) या भूरा पत्ता धब्बा रोग';
+          explanation = 'पत्तियों पर नाव के आकार के धब्बे और अत्यधिक नमी ब्लास्ट रोग के स्पष्ट संकेत हैं।';
+          whyReasons.push('पत्तियों पर किनारों पर भूरे और केंद्र में स्लेटी धब्बे देखे गए हैं।');
+          whyReasons.push(`खेत में हवा की नमी ${humidity}% अधिक है, जिससे फफूंद तेजी से फैलती है।`);
+          actions.push('यूरिया (नाइट्रोजन) की अतिरिक्त खुराक तुरंत रोक दें।');
+          actions.push('ट्राइसाइक्लाजोल (0.6 ग्राम प्रति लीटर) का घोल बनाकर छिड़काव करें।');
+          actions.push('खेत से पानी की निकासी कर 2 दिन हवा लगने दें (AWD विधि)।');
+          actions.push('पोटाश उर्वरक की संतुलित मात्रा दें।');
+        } else {
+          possibleIssue = 'Rice Blast (Magnaporthe oryzae) & Brown Spot';
+          explanation = 'Spindle-shaped lesions with grey centres and high humidity favor rapid blast sporulation.';
+          whyReasons.push('Spindle-shaped necrotic lesions observed on leaf blades.');
+          whyReasons.push(`High relative humidity (${humidity}%) provides ideal leaf-wetness duration.`);
+          actions.push('Temporarily withhold top-dressing of nitrogenous fertilizers (Urea).');
+          actions.push('Foliar spray of Tricyclazole 75% WP @ 0.6g/L water.');
+          actions.push('Drain standing water for 48 hours to expose soil to aeration.');
+          actions.push('Apply supplemental Muriate of Potash (MOP) to build leaf silica strength.');
+        }
+      } else if (hasInsects) {
+        seriousness = 'HIGH';
+        issueCategory = 'pest';
+        confidenceScore = 0.90;
+        if (language === 'te') {
+          possibleIssue = 'వరిలో కాండం తొలుచు పురుగు (Stem Borer) లేదా సుడిదోమ (BPH)';
+          explanation = 'పిలకలు ఎండిపోవడం (డెడ్ హార్ట్స్) లేదా మొదళ్ల వద్ద సుడిదోమ గుంపులు పంటను తీవ్రంగా దెబ్బతీస్తాయి.';
+          whyReasons.push('పైరులో కాండం తొలుచు పురుగు లేదా మొదళ్ల వద్ద కీటకాల ఉనికి కనిపించింది.');
+          whyReasons.push('వరి దుబ్బులలో గాలి ప్రసరణ తక్కువగా ఉన్నప్పుడు సుడిదోమ వేగంగా పెరుగుతుంది.');
+          actions.push('సుడిదోమ ఉంటే పొలంలోని నీటిని వెంటనే పూర్తిగా ఖాళీ చేసి ఆరబెట్టండి.');
+          actions.push('ఎకరాకు 8 లింగాకర్షక బుట్టలు (Pheromone traps) కాండం తొలుచు పురుగుల కోసం అమర్చండి.');
+          actions.push('క్లోరాంట్రానిలిప్రోల్ 18.5% SC (@ 0.3 మి.లీ/లీ) లేదా పైమెట్రోజిన్ పిచికారీ చేయండి.');
+          actions.push('పిచికారీ ఎల్లప్పుడూ మొక్కల మొదళ్లను తడిపేలా చేయాలి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'धान में तना छेदक (Stem Borer) या भूरा फुदका (BPH) कीट';
+          explanation = 'तना छेदक से मृत गोप (Dead Heart) और फुदका कीट से पौधे झुलसने का खतरा बढ़ गया है।';
+          whyReasons.push('तने के अंदर सुंडी या पौधे के निचले भाग में कीटों की गतिविधि पाई गई।');
+          whyReasons.push('खेत में लगातार भरा पानी फुदका कीटों के प्रजनन को बढ़ाता है।');
+          actions.push('खेत से पानी पूरी तरह निकाल दें और 3 दिन सूखने दें।');
+          actions.push('तना छेदक के लिए 8 फेरोमोन ट्रैप प्रति एकड़ लगाएं।');
+          actions.push('क्लोरांट्रानिलीप्रोल (0.3 मिली/लीटर) का शाम के समय छिड़काव करें।');
+          actions.push('छिड़काव का रुख पौधों की जड़ों और तने के निचले भाग की तरफ रखें।');
+        } else {
+          possibleIssue = 'Stem Borer (Scirpophaga incertulas) & Brown Plant Hopper';
+          explanation = 'Dead hearts or hopper burn patches caused by internal vascular feeder infestation.';
+          whyReasons.push('Symptoms of central shoot drying or basal insect congregating.');
+          whyReasons.push('Continuous stagnant water layer creates humid habitat for hoppers.');
+          actions.push('Immediately drain excess water to break insect reproductive cycles.');
+          actions.push('Install 6-8 pheromone traps per acre to monitor yellow stem borer moths.');
+          actions.push('Apply Chlorantraniliprole 18.5% SC @ 0.3ml/L targeting the plant base.');
+          actions.push('Maintain alternate wetting and drying (AWD) irrigation.');
+        }
+      } else {
+        seriousness = 'LOW';
+        issueCategory = 'healthy';
+        confidenceScore = 0.95;
+        if (language === 'te') {
+          possibleIssue = 'వరి పైరు ఆరోగ్యంగా ఉంది — పిలకల దశ & సమగ్ర పోషక యాజమాన్యం';
+          explanation = 'పంట ఆరోగ్యవంతమైన పచ్చదనంతో ఉంది. పిలకలు బలంగా రావడానికి సమతుల్య నీటి తడులు ఇవ్వండి.';
+          whyReasons.push('పైరు ఆకులు తెగుళ్లు లేకుండా ఆరోగ్యంగా ఉన్నాయి.');
+          whyReasons.push(`ఉష్ణోగ్రత ${temp}°C వరి పెరుగుదలకు చాలా అనుకూలంగా ఉంది.`);
+          actions.push('ఎకరాకు 20 కిలోల పొటాష్ వేసి పిలకలు గట్టిపడేలా చేయండి.');
+          actions.push('పొలంలో 2-3 సెం.మీ నీటి మట్టం మాత్రమే ఉంచి ఆరబెడుతూ నీరు పెట్టండి.');
+          actions.push('గట్లపై కలుపు మొక్కలను తొలగించి పురుగుల ఆశ్రయాన్ని నివారించండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'धान की फसल स्वस्थ स्थिति में — कल्ले फूटना एवं संतुलित पोषण';
+          explanation = 'फसल में कोई बीमारी नहीं है। अच्छे कल्ले फूटने के लिए उचित सिंचाई प्रबंधन करें।';
+          whyReasons.push('पत्तियों में स्वस्थ हरापन और मजबूत तना है।');
+          whyReasons.push(`वर्तमान मौसम (${temp}°C) वानस्पतिक बढ़वार के लिए आदर्श है।`);
+          actions.push('खेत में 2-3 सेमी से ज्यादा पानी न भरने दें; आल्टरनेट वेटिंग एंड ड्राइंग अपनाएं।');
+          actions.push('पोटाश की अनुशंसित खुराक दें।');
+          actions.push('मेड़ों की घास व खरपतवार साफ रखें।');
+        } else {
+          possibleIssue = 'Rice Crop in Prime Vegetative Health — Tiller Care';
+          explanation = 'Vigorous tillering phase with no fungal lesions or pest punctures.';
+          whyReasons.push('Uniform green foliage with optimal leaf erectness.');
+          whyReasons.push(`Temperature ${temp}°C promotes robust enzymatic nutrient uptake.`);
+          actions.push('Maintain thin water film (2-3 cm) rather than deep submergence.');
+          actions.push('Apply balanced MOP (Potash) to strengthen culm wall resistance.');
+          actions.push('Keep bunds free of weed alternate hosts.');
+        }
+      }
+    }
+
+    // =========================================================================
+    // 3. CHILLI (మిరప / मिर्च)
+    // =========================================================================
+    else if (cropKey.includes('chilli') || cropKey.includes('pepper') || cropKey.includes('మిరప') || cropKey.includes('मिर्च')) {
+      if (hasInsects || hasYellowLeaves || hasPoorGrowth) {
+        seriousness = 'HIGH';
+        issueCategory = 'pest';
+        confidenceScore = 0.92;
+        if (language === 'te') {
+          possibleIssue = 'మిరపలో జెమిని వైరస్ ముడత తెగులు (తామర పురుగులు / Thrips & Mites దాడి)';
+          explanation = 'ఆకులు పైకి దోనెలా ముడుచుకుంటే తామర పురుగులు, కిందకు ముడుచుకుంటే నల్లి పురుగుల ఉధృతిగా గుర్తించాలి.';
+          whyReasons.push('ఆకులు ముడుచుకుపోవడం మరియు ఎదుగుదల లోపించడం స్పష్టంగా ఉంది.');
+          whyReasons.push(`వేడి వాతావరణం (${temp}°C) రసం పీల్చే పురుగుల గుడ్లు త్వరగా పొదగడానికి సహాయపడుతుంది.`);
+          actions.push('ఆకులు పైకి ముడుచుకుంటే తామర పురుగుల కోసం నీలి రంగు జిగురు అట్టలు (Blue traps) ఎకరాకు 15 పెట్టండి.');
+          actions.push('ఆకులు కిందకు ముడుచుకుంటే మైట్లకు సల్ఫర్ 80% WP (3 గ్రా/లీ) పిచికారీ చేయండి.');
+          actions.push('వేప నూనె (10,000 PPM @ 2 మి.లీ/లీ) సాయంత్రం వేళల్లో పిచికారీ చేయండి.');
+          actions.push('నత్రజని ఎరువుల వాడకాన్ని తగ్గించి పొటాష్, సూక్ష్మపోషకాలు అందించండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मिर्च में मरोड़िया रोग (चुर्रा-मुर्रा) एवं थ्रिप्स/माइट्स का प्रकोप';
+          explanation = 'पत्तियों का ऊपर नाव की तरह मुड़ना थ्रिप्स और नीचे मुड़ना माइट्स कीट का संकेत है।';
+          whyReasons.push('पत्तियों में गंभीर सिकुड़न और बढ़वार का रुकना देखा गया है।');
+          whyReasons.push(`गर्म तापमान (${temp}°C) रस चूसक कीटों को तेजी से बढ़ाता है।`);
+          actions.push('थ्रिप्स की निगरानी के लिए 15 नीले स्टिकी ट्रैप प्रति एकड़ लगाएं।');
+          actions.push('माइट्स के लिए घुलनशील गंधक (सल्फर 3 ग्राम/लीटर) का छिड़काव करें।');
+          actions.push('नीम का तेल (5 मिली/लीटर) शाम को पत्तियों के नीचे छिड़कें।');
+          actions.push('अत्यधिक यूरिया देने से बचें।');
+        } else {
+          possibleIssue = 'Chilli Leaf Curl (Murda Complex) & Thrips/Mite Attack';
+          explanation = 'Upward leaf curling caused by Scirtothrips dorsalis or downward curling by Polyphagotarsonemus mites.';
+          whyReasons.push('Curled, boat-shaped leaves with crinkled leaf margins.');
+          whyReasons.push(`Warm field temperatures (${temp}°C) facilitate rapid generation turnover of sucking vectors.`);
+          actions.push('Erect 15 blue sticky traps per acre for thrips monitoring.');
+          actions.push('If leaves curl downward, spray Wettable Sulphur (3g/L) for mite suppression.');
+          actions.push('Apply cold-pressed Neem Oil (10,000 ppm @ 2ml/L) in the cool evening.');
+          actions.push('Balance vegetative growth by curtailing excess nitrogen.');
+        }
+      } else if (hasBrownSpots || hasDrying) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'fungal';
+        confidenceScore = 0.89;
+        if (language === 'te') {
+          possibleIssue = 'మిరపలో కొమ్మ ఎండు తెగులు మరియు కాయ కుళ్లు (Anthracnose Dieback)';
+          explanation = 'కొమ్మల చివర్ల నుండి ఎండిపోవడం మరియు కాయలపై నల్లటి గుండ్రని మచ్చలు ఏర్పడటం శిలీంధ్ర తెగులు లక్షణం.';
+          whyReasons.push('కొమ్మలు పైనుండి కిందికి ఎండిపోవడం లేదా కాయలపై మచ్చలు గమనించబడ్డాయి.');
+          whyReasons.push(`గాలిలో తేమ ${humidity}% ఎక్కువగా ఉండటం కొమ్మ ఎండు శిలీంధ్రానికి కారణమవుతోంది.`);
+          actions.push('ఎండిపోయిన కొమ్మల భాగాన్ని ఆరోగ్యకరమైన కాండం వరకు కత్తిరించి కాల్చివేయండి.');
+          actions.push('అజోక్సిస్ట్రోబిన్ + డైఫెనోకోనజోల్ (1 మి.లీ/లీ) లేదా కాపర్ హైడ్రాక్సైడ్ (2.5 గ్రా/లీ) పిచికారీ చేయండి.');
+          actions.push('మిరప తోటలో మురుగు నీరు నిల్వ లేకుండా బయటకు పోయేలా చేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मिर्च में डाइबैक (टहनी सूखना) एवं फल सड़न रोग (Anthracnose)';
+          explanation = 'टहनियों का ऊपर से नीचे सूखना और फलों पर गोल काले धब्बे फंगस के कारण होते हैं।';
+          whyReasons.push('टहनियों का सूखना व फलों पर धब्बे दर्ज किए गए हैं।');
+          whyReasons.push(`हवा में ${humidity}% नमी होने से रोग तेजी से फैलता है।`);
+          actions.push('सूखी टहनियों को स्वस्थ हिस्से से 2 सेमी नीचे से काटकर हटा दें।');
+          actions.push('एज़ोक्सिस्ट्रोबिन + डिफेनोकोनाज़ोल (1 मिली/लीटर) का छिड़काव करें।');
+          actions.push('खेत में पानी का जमाव न होने दें।');
+        } else {
+          possibleIssue = 'Chilli Dieback & Anthracnose Fruit Rot (Colletotrichum)';
+          explanation = 'Top-down necrosis of branches and circular sunken necrotic lesions on developing pods.';
+          whyReasons.push('Branch tip dieback or circular dark lesions on pods.');
+          whyReasons.push(`High relative humidity (${humidity}%) promotes acervuli germination.`);
+          actions.push('Prune affected twigs 2 cm below infected green margins and destroy.');
+          actions.push('Spray Azoxystrobin + Difenoconazole (1 ml/L) or Copper Hydroxide (2.5 g/L).');
+          actions.push('Ensure proper furrow drainage to eliminate stagnant water puddles.');
+        }
+      } else {
+        seriousness = 'LOW';
+        issueCategory = 'healthy';
+        confidenceScore = 0.93;
+        if (language === 'te') {
+          possibleIssue = 'మిరప తోట ఆరోగ్యంగా ఉంది — పూత, పిందె సంరక్షణ & సమగ్ర యాజమాన్యం';
+          explanation = 'తోటలో ఎలాంటి తెగుళ్లు లేవు. పూత రాలకుండా తేలికపాటి నీరు మరియు బయో-స్టిమ్యులెంట్స్ ఇవ్వండి.';
+          whyReasons.push('ఆకులు ముడత లేకుండా ఆరోగ్యవంతమైన ఆకుపచ్చ రంగుతో ఉన్నాయి.');
+          whyReasons.push(`ఉష్ణోగ్రత ${temp}°C మిరప కాయల అభివృద్ధికి అనుకూలంగా ఉంది.`);
+          actions.push('పూత నిలవడానికి ప్లానోఫిక్స్ (Planofix @ 0.25 మి.లీ/4.5 లీ నీటికి) పిచికారీ చేయండి.');
+          actions.push('సాయంత్రం పూట మాత్రమే తేలికపాటి నీటి తడులు ఇవ్వండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मिर्च की फसल स्वस्थ — फूल और फल का बेहतर प्रबंधन';
+          explanation = 'फसल बिल्कुल स्वस्थ है। फूल झड़ने से रोकने के लिए हल्की सिंचाई जारी रखें।';
+          whyReasons.push('पत्तियों में कोई मरोड़िया या फंगस के लक्षण नहीं हैं।');
+          whyReasons.push(`तापमान ${temp}°C मिर्च के फलों के विकास के लिए सही है।`);
+          actions.push('फूल गिरने से बचाने के लिए प्लेनोफिक्स का हल्का छिड़काव करें।');
+          actions.push('शाम के समय हल्की सिंचाई करें।');
+        } else {
+          possibleIssue = 'Chilli Crop in Excellent Health — Flowering & Pod Setting';
+          explanation = 'Leaves are uncurled with healthy dark green canopy.';
+          whyReasons.push('Absence of vector thrips distortion or anthracnose lesions.');
+          whyReasons.push(`Temperature ${temp}°C supports continuous flower bud emergence.`);
+          actions.push('Apply Planofix (alpha naphthyl acetic acid) at recommended dose to retain blossoms.');
+          actions.push('Provide uniform light evening irrigations.');
+        }
+      }
+    }
+
+    // =========================================================================
+    // 4. COTTON (పత్తి / कपास)
+    // =========================================================================
+    else if (cropKey.includes('cotton') || cropKey.includes('పత్తి') || cropKey.includes('कपास')) {
+      if (hasInsects) {
+        seriousness = 'HIGH';
+        issueCategory = 'pest';
+        confidenceScore = 0.91;
+        if (language === 'te') {
+          possibleIssue = 'పత్తిలో గులాబీ రంగు బొబ్బ పురుగు (Pink Bollworm) లేదా రసం పీల్చే పురుగులు';
+          explanation = 'కాయలకు రంధ్రాలు పడటం లేదా పూత రాలిపోవడం గులాబీ రంగు పురుగు ఉధృతిని తెలుపుతుంది.';
+          whyReasons.push('కాయలలో పురుగు తొలిచిన రంధ్రాలు లేదా రసం పీల్చే పురుగులు గమనించబడ్డాయి.');
+          whyReasons.push(`ఉష్ణోగ్రత ${temp}°C పురుగుల లార్వాల ఎదుగుదలకు అనుకూలంగా ఉంది.`);
+          actions.push('ఎకరాకు 8 గులాబీ రంగు బొబ్బ పురుగు లింగాకర్షక బుట్టలు (Pheromone traps) అమర్చండి.');
+          actions.push('ఎమామెక్టిన్ బెంజోయేట్ 5% SG (0.4 గ్రా/లీ) లేదా ప్రొఫెనోఫాస్ (2 మి.లీ/లీ) పిచికారీ చేయండి.');
+          actions.push('రాలిన పూత మరియు గుడ్డి కాయలను ఏరివేసి నాశనం చేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'कपास में गुलाबी सुंडी (Pink Bollworm) या रस चूसक कीटों का हमला';
+          explanation = 'टिंडों में छेद होना या फूल का गिरना गुलाबी सुंडी के प्रकोप का लक्षण है।';
+          whyReasons.push('टिंडों में कीड़े के निशान या रस चूसक कीट दर्ज किए गए हैं।');
+          whyReasons.push('वर्तमान मौसम कीटों की अगली पीढ़ी तैयार करने में मदद कर रहा है।');
+          actions.push('खेत में 8 फेरोमोन ट्रैप प्रति एकड़ लगाकर निगरानी करें।');
+          actions.push('इमामेक्टिन बेंजोएट (0.4 ग्राम प्रति लीटर) का छिड़काव करें।');
+          actions.push('गिरे हुए फूलों और खराब टिंडों को एकत्र कर जला दें।');
+        } else {
+          possibleIssue = 'Pink Bollworm (Pectinophora gossypiella) & Sucking Pests on Cotton';
+          explanation = 'Boll punctures and rosette flowers induced by internal boll feeder larvae.';
+          whyReasons.push('Presence of caterpillar frass or bore holes on developing squares/bolls.');
+          whyReasons.push(`Temperature ${temp}°C facilitates adult moth emergence and oviposition.`);
+          actions.push('Install 8 Pink Bollworm pheromone traps per acre.');
+          actions.push('Spray Emamectin Benzoate 5% SG @ 0.4g/L or Profenofos 50% EC @ 2ml/L.');
+          actions.push('Collect and destroy shed squares and rosette flowers to break lifecycle.');
+        }
+      } else if (hasYellowLeaves || hasDrying) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'nutrient';
+        confidenceScore = 0.87;
+        if (language === 'te') {
+          possibleIssue = 'పత్తిలో ఆకులు ఎర్రబడటం (మెగ్నీషియం లోపం / Leaf Reddening) లేదా పారావిల్ట్';
+          explanation = 'ఆకుల ఈనెల మధ్య భాగం ఎరుపు రంగులోకి మారడం నేలలో మెగ్నీషియం లోపం మరియు చలి తీవ్రత వల్ల వస్తుంది.';
+          whyReasons.push('ఆకులు అంచుల నుండి ఎరుపు/ఊదా రంగులోకి మారడం గమనించబడింది.');
+          whyReasons.push('కాయలు ఎదిగే దశలో మెగ్నీషియం అవసరం ఎక్కువగా ఉంటుంది.');
+          actions.push('మెగ్నీషియం సల్ఫేట్ (10 గ్రా/లీ) + యూరియా (10 గ్రా/లీ) కలిపి ఆకులపై పిచికారీ చేయండి.');
+          actions.push('15 రోజుల వ్యవధిలో రెండోసారి మళ్లీ ఇదే స్ప్రే చేయండి.');
+          actions.push('నేలలో నిల్వ ఉన్న నీటిని వెంటనే తీసివేసి మొదళ్లకు గాలి తగిలేలా చేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'कपास में पत्तियों का लाल पड़ना (मैग्नीशियम की कमी) या पैराविल्ट';
+          explanation = 'पत्तियों की शिराओं के बीच लाल रंग उभरना मैग्नीशियम पोषक तत्व की कमी का संकेत है।';
+          whyReasons.push('पत्तियों में लालिमा और पोषण की कमी के लक्षण मिले हैं।');
+          whyReasons.push('टिंडे बनते समय पौधों को मैग्नीशियम की अधिक आवश्यकता होती है।');
+          actions.push('मैग्नीशियम सल्फेट (10 ग्राम/लीटर) + यूरिया (10 ग्राम/लीटर) का पर्णीय छिड़काव करें।');
+          actions.push('15 दिन बाद दोबारा दोहराएं।');
+          actions.push('खेत से जलभराव तुरंत निकालें।');
+        } else {
+          possibleIssue = 'Cotton Leaf Reddening (Magnesium Deficiency) & Moisture Stress';
+          explanation = 'Interveinal purple-red pigmentation triggered by nutrient drain during boll maturation.';
+          whyReasons.push('Interveinal reddening while major veins remain greenish.');
+          whyReasons.push('Heavy boll load demands rapid translocated magnesium.');
+          actions.push('Foliar spray Magnesium Sulphate (10g/L) + Urea (10g/L).');
+          actions.push('Repeat the spray after 12-15 days.');
+          actions.push('Ensure soil aeration and drain waterlogged furrows.');
+        }
+      } else {
+        seriousness = 'LOW';
+        issueCategory = 'healthy';
+        confidenceScore = 0.94;
+        if (language === 'te') {
+          possibleIssue = 'పత్తి పైరు మంచి ఆరోగ్యంతో ఉంది — కాయ ఎదుగుదల యాజమాన్యం';
+          explanation = 'పత్తి పంట ఆరోగ్యంగా ఎదుగుతోంది. కాయలు నాణ్యంగా రావడానికి బోరాన్ మరియు పొటాష్ అవసరం.';
+          whyReasons.push('ఆకులు ఆరోగ్యంగా, కాయలు సమానంగా ఎదుగుతున్నాయి.');
+          whyReasons.push(`వాతావరణం (${temp}°C) పత్తి కాయల వికాసానికి అనుకూలంగా ఉంది.`);
+          actions.push('బోరాక్స్ (1.5 గ్రా/లీ) పిచికారీ చేసి కాయల పగుళ్లను నివారించండి.');
+          actions.push('13-0-45 (పొటాషియం నైట్రేట్ @ 10 గ్రా/లీ) పిచికారీ చేసి దూది బరువును పెంచండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'कपास की फसल स्वस्थ — टिंडों का विकास एवं पोषण';
+          explanation = 'फसल रोगमुक्त है। अच्छे वजन और गुणवत्ता के लिए संतुलित पोषण दें।';
+          whyReasons.push('पौधे मजबूत हैं और कोई कीट हमला नहीं है।');
+          whyReasons.push(`तापमान ${temp}°C टिंडों के फैलाव के लिए अनुकूल है।`);
+          actions.push('पोटेशियम नाइट्रेट (13-0-45 @ 10 ग्राम/लीटर) का छिड़काव करें।');
+          actions.push('बोरॉन का हल्का स्प्रे करें ताकि टिंडे स्वस्थ रहें।');
+        } else {
+          possibleIssue = 'Cotton Crop in Vigorous Health — Boll Development Phase';
+          explanation = 'Canopy is free of sucking pest cupping or bacterial angular blight.';
+          whyReasons.push('Broad, photosynthetically active green foliage.');
+          whyReasons.push(`Field climate (${temp}°C) drives optimal boll retention.`);
+          actions.push('Foliar spray 13-0-45 (Potassium Nitrate @ 10g/L) to maximize boll weight.');
+          actions.push('Apply soluble Boron (1g/L) to prevent square drop and locule rot.');
+        }
+      }
+    }
+
+    // =========================================================================
+    // 5. MAIZE / CORN (మొక్కజొన్న / मक्का)
+    // =========================================================================
+    else if (cropKey.includes('maize') || cropKey.includes('corn') || cropKey.includes('మొక్కజొన్న') || cropKey.includes('मक्का')) {
+      if (hasInsects) {
+        seriousness = 'HIGH';
+        issueCategory = 'pest';
+        confidenceScore = 0.93;
+        if (language === 'te') {
+          possibleIssue = 'మొక్కజొన్నలో కత్తెర పురుగు (Fall Armyworm) తీవ్ర దాడి';
+          explanation = 'సుడిలోని ఆకులకు పెద్ద రంధ్రాలు పడటం మరియు లద్దె పురుగు విసర్జన పదార్థాలు ఉండటం కత్తెర పురుగు లక్షణం.';
+          whyReasons.push('మొక్క సుడిలో ఆకులు కొరికివేయబడ్డాయి మరియు చెక్కపొట్టు లాంటి పురుగు రెట్ట కనిపించింది.');
+          whyReasons.push(`ఉష్ణోగ్రత ${temp}°C కత్తెర పురుగుల సంతతి వేగంగా పెరగడానికి కారణమవుతోంది.`);
+          actions.push('సుడి తడిచేలా ఎమామెక్టిన్ బెంజోయేట్ 5% SG (0.4 గ్రా/లీ) పిచికారీ చేయండి.');
+          actions.push('చిటికెడు ఇసుక + సున్నం మిశ్రమాన్ని ప్రతి మొక్క సుడిలో వేయండి.');
+          actions.push('ఎకరాకు 5 లింగాకర్షక బుట్టలు పెట్టి పురుగుల ఉధృతిని రోజూ గమనించండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मक्के में फॉल आर्मीवर्म (सैनिक कीट / Fall Armyworm) का प्रकोप';
+          explanation = 'मक्के की गोभ में बड़े छेद और लकड़ी के बुरादे जैसा मल दिखना फॉल आर्मीवर्म का मुख्य लक्षण है।';
+          whyReasons.push('गोभ की पत्तियां कटी हुई हैं और कीट की मौजूदगी पाई गई।');
+          whyReasons.push('वर्तमान तापमान कीट की तीव्रता को बढ़ा रहा है।');
+          actions.push('इमामेक्टिन बेंजोएट (0.4 ग्राम/लीटर) का गोभ के अंदर सीधा छिड़काव करें।');
+          actions.push('रेत और चूने का मिश्रण चुटकी भर गोभ में डालें।');
+          actions.push('5 फेरोमोन ट्रैप प्रति एकड़ लगाएं।');
+        } else {
+          possibleIssue = 'Fall Armyworm (Spodoptera frugiperda) on Maize';
+          explanation = 'Window pane feeding and extensive whorl skeletonization with sawdust-like frass.';
+          whyReasons.push('Ragged leaf margins and fecal pellets within the whorl funnel.');
+          whyReasons.push(`Ambient warmth (${temp}°C) accelerates caterpillar molting.`);
+          actions.push('Direct whorl application of Emamectin Benzoate 5% SG @ 0.4g/L.');
+          actions.push('Apply a pinch of fine sand mixed with lime (9:1) into central whorls.');
+          actions.push('Install 5 FAW pheromone traps per acre.');
+        }
+      } else {
+        seriousness = 'LOW';
+        issueCategory = 'healthy';
+        confidenceScore = 0.94;
+        if (language === 'te') {
+          possibleIssue = 'మొక్కజొన్న పైరు పచ్చగా ఆరోగ్యంగా ఉంది — కంకి ఎదుగుదల యాజమాన్యం';
+          explanation = 'పంట ఎదుగుదల బాగుంది. కంకిలో గింజ నిండడానికి తగినంత తేమను కొనసాగించండి.';
+          whyReasons.push('ఆకులు ఎలాంటి రంధ్రాలు లేకుండా ఆరోగ్యంగా ఉన్నాయి.');
+          whyReasons.push(`వాతావరణం ${temp}°C కిరణజన్య సంయోగక్రియకు అనుకూలంగా ఉంది.`);
+          actions.push('కంకి దశలో నీటి ఎద్దడి రాకుండా క్రమంగా నీరు పెట్టండి.');
+          actions.push('ఎకరాకు 15 కిలోల పొటాష్ వేసి గింజ బరువు పెరిగేలా చేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मक्के की फसल स्वस्थ — भुट्टा भराव एवं पोषण';
+          explanation = 'फसल पूर्ण रूप से स्वस्थ है। भुट्टे में दाना भरने के लिए नमी बनाए रखें।';
+          whyReasons.push('पत्तियां हरी और मजबूत हैं।');
+          whyReasons.push(`तापमान ${temp}°C दाना भराव के लिए अच्छा है।`);
+          actions.push('भुट्टा बनते समय पानी की कमी न होने दें।');
+          actions.push('पोटाश की संतुलित मात्रा दें।');
+        } else {
+          possibleIssue = 'Maize Crop in Healthy Vegetative State — Cob Development';
+          explanation = 'Clean whorls with vigorous photosynthetic leaf area.';
+          whyReasons.push('Absence of FAW whorl lacerations or Turcicum leaf stripes.');
+          whyReasons.push(`Temperature ${temp}°C supports continuous carbon assimilation.`);
+          actions.push('Maintain uniform irrigation during critical tasseling and silking.');
+          actions.push('Top-dress MOP to promote full grain kernel filling.');
+        }
+      }
+    }
+
+    // =========================================================================
+    // 6. OTHER / GENERAL CROPS (Groundnut, Mango, Pulses, Vegetables)
+    // =========================================================================
+    else {
+      if (hasInsects) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'pest';
+        confidenceScore = 0.88;
+        if (language === 'te') {
+          possibleIssue = `${cropName} పంటలో కీటకాలు లేదా రసం పీల్చే పురుగుల ఉధృతి`;
+          explanation = 'ఆకులపై కీటకాలు మరియు రంధ్రాలు గమనించబడ్డాయి. ఇది పైరు ఎదుగుదలను దెబ్బతీస్తుంది.';
+          whyReasons.push('ఆకులపై పురుగు తొలిచిన నష్టం లేదా రంధ్రాలు కనిపించాయి.');
+          whyReasons.push(`ఉష్ణోగ్రత ${temp}°C పురుగుల వ్యాప్తికి కారణమవుతోంది.`);
+          actions.push('బాధిత ఆకులను గమనించి నాశనం చేయండి.');
+          actions.push('వేప నూనె (5 మి.లీ/లీ) సాయంత్రం వేళల్లో పిచికారీ చేయండి.');
+          actions.push('ఎల్లో స్టిక్కీ ట్రాప్స్ ఎకరాకు 10 ఏర్పాటు చేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = `${cropName} में कीट या रस चूसक कीड़ों का प्रकोप`;
+          explanation = 'फसल की पत्तियों पर कीड़ों के लक्षण देखे गए हैं। समय पर नियंत्रण आवश्यक है।';
+          whyReasons.push('पत्तियों पर कीट नुकसान पाया गया।');
+          whyReasons.push(`तापमान ${temp}°C कीट प्रजनन के अनुकूल है।`);
+          actions.push('संक्रमित पत्तों को छांटकर नष्ट करें।');
+          actions.push('नीम तेल (5 मिली/लीटर) का छिड़काव करें।');
+          actions.push('पीले स्टिकी ट्रैप लगाएं।');
+        } else {
+          possibleIssue = `Insect Pest Infestation on ${cropName}`;
+          explanation = 'Visible signs of insect defoliation or leaf piercing observed.';
+          whyReasons.push('Insect feeding punctures observed on crop canopy.');
+          whyReasons.push(`Field temperature (${temp}°C) accelerates pest multiplication.`);
+          actions.push('Inspect affected foliage and remove early egg clusters.');
+          actions.push('Apply organic Neem oil spray (5ml/L) during evening hours.');
+          actions.push('Erect 10 yellow sticky traps per acre.');
+        }
+      } else if (hasBrownSpots) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'fungal';
+        confidenceScore = 0.89;
+        if (language === 'te') {
+          possibleIssue = `${cropName} పంటలో శిలీంధ్ర ఆకుమచ్చ తెగులు (Leaf Spot)`;
+          explanation = 'ఆకులపై గోధుమ రంగు మచ్చలు మరియు గాలిలోని అధిక తేమ శిలీంధ్ర వ్యాధి వ్యాప్తికి కారణం.';
+          whyReasons.push('ఆకులపై గోధుమ రంగు నెక్రోటిక్ మచ్చలు గమనించబడ్డాయి.');
+          whyReasons.push(`గాలిలో తేమ ${humidity}% ఎక్కువగా ఉండటం ఫంగస్ వ్యాప్తికి అనుకూలం.`);
+          actions.push('బాధిత ఆకులను తీసివేసి పొలం బయట వేయండి.');
+          actions.push('కాపర్ ఆక్సిక్లోరైడ్ (3 గ్రా/లీ) లేదా మాంకోజెబ్ (2.5 గ్రా/లీ) పిచికారీ చేయండి.');
+          actions.push('పొలంలో నీరు నిల్వ ఉండకుండా చూసుకోండి.');
+        } else if (language === 'hi') {
+          possibleIssue = `${cropName} में फंगल पत्ता धब्बा रोग (Leaf Spot)`;
+          explanation = 'पत्तियों पर भूरे धब्बे और हवा की नमी फंगल संक्रमण का संकेत हैं।';
+          whyReasons.push('पत्तियों पर भूरे धब्बे पाए गए हैं।');
+          whyReasons.push(`हवा में ${humidity}% नमी फंगस को बढ़ा रही है।`);
+          actions.push('संक्रमित पत्तियों को नष्ट करें।');
+          actions.push('कॉपर ऑक्सीक्लोराइड (3 ग्राम/लीटर) या मैंकोजेब का छिड़काव करें।');
+          actions.push('खेत से अतिरिक्त पानी निकालें।');
+        } else {
+          possibleIssue = `Fungal Foliar Leaf Spot on ${cropName}`;
+          explanation = 'Necrotic brown spots correlated with high ambient humidity indicate fungal pathogen development.';
+          whyReasons.push('Brown necrotic spots observed on leaves.');
+          whyReasons.push(`Farm humidity at ${humidity}% sustains fungal sporulation.`);
+          actions.push('Prune heavily spotted lower leaves.');
+          actions.push('Apply Copper Oxychloride (3g/L) or Mancozeb (2.5g/L) spray.');
+          actions.push('Avoid excess irrigation and improve furrow drainage.');
+        }
+      } else {
+        seriousness = 'LOW';
+        issueCategory = 'healthy';
+        confidenceScore = 0.94;
+        if (language === 'te') {
+          possibleIssue = `${cropName} పంట ఆరోగ్యంగా ఉంది — సాధారణ సంరక్షణ సూచనలు`;
+          explanation = 'పంట ఆరోగ్యకరమైన స్థితిలో ఉంది. సరైన నీటి తడులు మరియు పోషకాలు కొనసాగించండి.';
+          whyReasons.push('ఆకులు సహజమైన ఆకుపచ్చ రంగుతో ఆరోగ్యంగా ఉన్నాయి.');
+          whyReasons.push(`ప్రస్తుత ఉష్ణోగ్రత ${temp}°C మరియు తేమ ${humidity}% పంటకు అనుకూలంగా ఉన్నాయి.`);
+          actions.push('క్రమబద్ధమైన తేలికపాటి నీటి యాజమాన్యం పాటించండి.');
+          actions.push('కలుపు లేకుండా పొలాన్ని శుభ్రంగా ఉంచండి.');
+          actions.push('ప్రతి వారం ఒకసారి పంట ఆరోగ్యాన్ని తనిఖీ చేసుకోండి.');
+        } else if (language === 'hi') {
+          possibleIssue = `${cropName} फसल स्वस्थ स्थिति में — सामान्य देखभाल`;
+          explanation = 'फसल पर कोई हानिकारक रोग नहीं है। नियमित देखभाल जारी रखें।';
+          whyReasons.push('पत्तियां स्वस्थ और हरी हैं।');
+          whyReasons.push(`मौसम की स्थिति (${temp}°C) फसल के लिए अनुकूल है।`);
+          actions.push('समय पर हल्की सिंचाई करें।');
+          actions.push('खरपतवार नियंत्रण रखें।');
+          actions.push('साप्ताहिक रूप से फसल की स्थिति जांचते रहें।');
+        } else {
+          possibleIssue = `${cropName} Crop in Stable Healthy Condition`;
+          explanation = 'No acute disease lesions or active pest damage observed.';
+          whyReasons.push('Vibrant green leaf canopy with normal vigor.');
+          whyReasons.push(`Field climate (${temp}°C, ${humidity}% humidity) is within favorable range.`);
+          actions.push('Maintain scheduled balanced irrigation.');
+          actions.push('Keep field clean of competing weeds.');
+          actions.push('Perform routine weekly health checks.');
+        }
+      }
+    }
+
+    // Comparison against previous assessment if available
     let previousComparison: CropAnalysisResult['previousComparison'] = undefined;
     if (previousAssessment) {
       const prevSeriousness = previousAssessment.seriousness;
       let status: 'better' | 'same' | 'needs_attention' = 'same';
-      let compExp = '';
+      let compExplanation = '';
 
-      if (prevSeriousness === 'HIGH' && seriousness !== 'HIGH') {
+      if (seriousness === 'LOW' && prevSeriousness !== 'LOW') {
         status = 'better';
-        compExp = language === 'te'
-          ? 'గత తనిఖీలో తీవ్రమైన ప్రమాదం ఉంది, ప్రస్తుతం పరిస్థితి మెరుగైంది.'
+        compExplanation = language === 'te'
+          ? 'గత తనిఖీతో పోలిస్తే పంట ఆరోగ్యం గణనీయంగా మెరుగైంది.'
           : language === 'hi'
-          ? 'पिछली जांच में उच्च जोखिम था, वर्तमान में स्थिति में सुधार हुआ है।'
-          : 'Risk has decreased compared to your previous assessment.';
-      } else if (prevSeriousness === 'LOW' && (seriousness === 'MEDIUM' || seriousness === 'HIGH')) {
+          ? 'पिछली जांच की तुलना में फसल का स्वास्थ्य सुधरा है।'
+          : 'Crop condition has noticeably improved since previous check.';
+      } else if (seriousness === 'HIGH' && prevSeriousness !== 'HIGH') {
         status = 'needs_attention';
-        compExp = language === 'te'
-          ? 'గత తనిఖీ కంటే ప్రమాద స్థాయి పెరిగింది, జాగ్రత్తలు పాటించండి.'
+        compExplanation = language === 'te'
+          ? 'గత తనిఖీ కంటే సమస్య తీవ్రమైంది. వెంటనే నివారణ చర్యలు చేపట్టండి.'
           : language === 'hi'
-          ? 'पिछली जांच की तुलना में जोखिम बढ़ा है, सावधानी बरतें।'
-          : 'Risk level has increased since your last inspection; requires attention.';
+          ? 'पिछली जांच से समस्या बढ़ी है। तुरंत उपचार करें।'
+          : 'Condition requires immediate attention compared to previous check.';
       } else {
         status = 'same';
-        compExp = language === 'te'
-          ? 'గత తనిఖీతో పోల్చితే పరిస్థితి స్థిరంగా ఉంది.'
+        compExplanation = language === 'te'
+          ? 'పంట స్థితి గత పరిశీలన మాదిరిగానే స్థిరంగా ఉంది.'
           : language === 'hi'
-          ? 'पिछली जांच की तुलना में स्थिति स्थिर है।'
-          : 'Crop condition is steady compared to previous inspection.';
+          ? 'फसल की स्थिति पिछली जांच जैसी ही बनी हुई है।'
+          : 'Crop health condition remains consistent with previous check.';
       }
 
-      previousComparison = { status, explanation: compExp };
+      previousComparison = { status, explanation: compExplanation };
     }
 
     return {
@@ -272,30 +641,30 @@ export class RuleBasedAIService implements AIService {
   }
 
   async analyzeSoilReport(params: SoilReportParams): Promise<SoilAnalysisResult> {
-    const { ph = 6.8, language = 'en' } = params;
-    let phAssessment = '';
+    const { ph, language = 'en' } = params;
     const recs: string[] = [];
+    let phAssessment = '';
 
-    if (ph < 6.0) {
+    if (ph !== undefined && ph < 6.0) {
       phAssessment = language === 'te'
         ? `ఆమ్ల నేల (pH ${ph}): నేలలో ఆమ్లత్వం ఎక్కువ.`
         : language === 'hi'
         ? `अम्लीय मिट्टी (pH ${ph}): मिट्टी में अम्लीयता अधिक है।`
         : `Acidic Soil (pH ${ph}): High acidity detected.`;
-      recs.push(language === 'te' ? 'ఎకరానికి 200 కేజీల వ్యవసాయ సున్నం (లైమ్) వేయండి.' : language === 'hi' ? '200 किग्रा कृषि चूना प्रति एकड़ मिलाएं।' : 'Apply 200 kg agricultural lime per acre.');
-    } else if (ph > 7.8) {
+      recs.push(language === 'te' ? 'ఎకరానికి 200 కేజీల వ్యవసాయ సున్నం (లైమ్) వేయండి.' : language === 'hi' ? '200 किग्रा कृषि चूना प्रति एकड़ मिलाएं।' : 'Apply 200 kg agricultural lime per acre to neutralize soil acidity.');
+    } else if (ph !== undefined && ph > 7.8) {
       phAssessment = language === 'te'
         ? `క్షార నేల (pH ${ph}): నేలలో సున్నం/క్షారత్వం ఎక్కువ.`
         : language === 'hi'
         ? `क्षारीय मिट्टी (pH ${ph}): मिट्टी में क्षारीयता अधिक है।`
         : `Alkaline Soil (pH ${ph}): High alkalinity detected.`;
-      recs.push(language === 'te' ? 'ఎకరానికి 100 కేజీల జిప్సం వేసి నీరు పెట్టండి.' : language === 'hi' ? '100 किग्रा जिप्सम प्रति एकड़ डालें।' : 'Apply 100 kg agricultural gypsum per acre.');
+      recs.push(language === 'te' ? 'ఎకరానికి 100 కేజీల జిప్సం వేసి నీరు పెట్టండి.' : language === 'hi' ? '100 किग्रा जिप्सम प्रति एकड़ डालें।' : 'Apply 100 kg agricultural gypsum per acre to reduce alkalinity.');
     } else {
       phAssessment = language === 'te'
-        ? `అనుకూలమైన నేల (pH ${ph}): పంటలకు చాలా అనువైనది.`
+        ? `అనుకూలమైన నేల (pH ${ph || 7.0}): పంటలకు చాలా అనువైనది.`
         : language === 'hi'
-        ? `अनुकूल मिट्टी (pH ${ph}): फसल के लिए बिल्कुल उपयुक्त।`
-        : `Optimal Soil pH (${ph}): Favorable nutrient uptake.`;
+        ? `अनुकूल मिट्टी (pH ${ph || 7.0}): फसल के लिए बिल्कुल उपयुक्त।`
+        : `Optimal Soil pH (${ph || 7.0}): Favorable nutrient uptake.`;
       recs.push(language === 'te' ? 'సేంద్రీయ ఎరువులు వేసి నేల సారాన్ని కాపాడండి.' : language === 'hi' ? 'गोबर की खाद या जैविक खाद का उपयोग करें।' : 'Maintain fertility using compost or farmyard manure.');
     }
 

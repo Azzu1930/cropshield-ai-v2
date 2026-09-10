@@ -33,7 +33,7 @@ export default function WaterPage() {
             <span>💧</span> {t.homeCards.water.title}
           </h1>
           <p className="text-sm font-semibold text-emerald-800 mt-0.5">
-            📍 {farm.name} ({farm.locality})
+            📍 {farm ? `${farm.name} (${farm.locality})` : 'Farm Location'}
           </p>
         </div>
       </div>
@@ -87,7 +87,7 @@ export default function WaterPage() {
 
           {saved && (
             <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-900 text-sm font-bold text-center animate-in fade-in">
-              ✓ Water record saved successfully for {farm.name}!
+              ✓ Water record saved successfully for {farm?.name || 'your farm'}!
             </div>
           )}
         </form>

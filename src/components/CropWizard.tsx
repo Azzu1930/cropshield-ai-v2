@@ -65,10 +65,12 @@ export function CropWizard() {
 
   // Load Active Farm & Weather
   useEffect(() => {
-    const active = getActiveFarm();
+    const active = getActiveFarm(user?.id);
     setFarm(active);
-    loadFarmWeather(active);
-  }, [language]);
+    if (active) {
+      loadFarmWeather(active);
+    }
+  }, [user, language]);
 
   const loadFarmWeather = async (f: FarmRecord) => {
     setWeatherLoading(true);
@@ -185,10 +187,12 @@ export function CropWizard() {
     try {
       const activeCropName = selectedCrop === 'Other' ? (customCrop || 'Crop') : selectedCrop;
 
-      // Check localStorage for previous assessment of same crop to compare
+      // Check user-scoped history for previous assessment of same crop to compare
       let previousAssessment: any = undefined;
+      const historyScope = user?.id || 'anonymous';
+      const historyKey = `cropshield_history_${historyScope}`;
       try {
-        const historyRaw = localStorage.getItem('cropshield_history');
+        const historyRaw = localStorage.getItem(historyKey);
         if (historyRaw) {
           const list = JSON.parse(historyRaw);
           const prev = list.find((item: any) => item.cropName === activeCropName);
@@ -242,9 +246,9 @@ export function CropWizard() {
       const data = await res.json();
       setAnalysisResult(data);
 
-      // Save to localStorage history for offline persistence & comparison
+      // Save to user-scoped history for offline persistence & comparison
       try {
-        const historyRaw = localStorage.getItem('cropshield_history');
+        const historyRaw = localStorage.getItem(historyKey);
         const historyList = historyRaw ? JSON.parse(historyRaw) : [];
         const entryId = data.id || `check-${Date.now()}`;
         const newRecord = {
@@ -256,7 +260,7 @@ export function CropWizard() {
           userId: user?.id,
         };
         historyList.unshift(newRecord);
-        localStorage.setItem('cropshield_history', JSON.stringify(historyList.slice(0, 50)));
+        localStorage.setItem(historyKey, JSON.stringify(historyList.slice(0, 50)));
 
         // Background sync to Supabase if authenticated with real session and farmId is available
         if (isSupabaseConfigured && supabase && user && !user.isDemo) {

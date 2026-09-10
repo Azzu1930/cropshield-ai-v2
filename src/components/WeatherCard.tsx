@@ -4,11 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, Droplets, Wind, CloudRain, AlertTriangle, RefreshCw, ChevronRight } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { getActiveFarm, type FarmRecord } from '@/lib/farm-store';
 import type { WeatherData } from '@/lib/supabase/database.types';
 
 export function WeatherCard() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const [farm, setFarm] = useState<FarmRecord | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -44,19 +46,58 @@ export function WeatherCard() {
   };
 
   useEffect(() => {
-    const active = getActiveFarm();
+    const active = getActiveFarm(user?.id);
     setFarm(active);
-    loadWeatherForFarm(active);
+    if (active) {
+      loadWeatherForFarm(active);
+    } else {
+      setLoading(false);
+    }
 
-    const handleFarmChange = (e: any) => {
-      const updatedFarm = getActiveFarm();
+    const handleFarmChange = () => {
+      const updatedFarm = getActiveFarm(user?.id);
       setFarm(updatedFarm);
-      loadWeatherForFarm(updatedFarm);
+      if (updatedFarm) {
+        loadWeatherForFarm(updatedFarm);
+      } else {
+        setLoading(false);
+        setWeather(null);
+      }
     };
 
     window.addEventListener('farmChanged', handleFarmChange);
     return () => window.removeEventListener('farmChanged', handleFarmChange);
-  }, [language]);
+  }, [user, language]);
+
+  if (!farm) {
+    return (
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-dashed border-emerald-300 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-2xl shrink-0">
+            📍
+          </div>
+          <div>
+            <h3 className="text-base font-black text-emerald-950">
+              {language === 'te' ? 'మీ పొలం స్థానాన్ని నమోదు చేయండి' : language === 'hi' ? 'अपने खेत का स्थान जोड़ें' : 'Set Your Farm Location'}
+            </h3>
+            <p className="text-xs text-emerald-800 font-medium mt-0.5">
+              {language === 'te'
+                ? 'ఖచ్చితమైన స్థానిక వాతావరణం మరియు తెగుళ్ల హెచ్చరికల కోసం మీ పొలాన్ని జోడించండి.'
+                : language === 'hi'
+                ? 'सटीक मौसम और कीट चेतावनियों के लिए अपने खेत का स्थान जोड़ें।'
+                : 'Add your farm to automatically detect temperature, rainfall forecast, and disease risks.'}
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/farms"
+          className="px-5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm shadow-md shrink-0 transition-all hover:scale-105 active:scale-100"
+        >
+          {language === 'te' ? '+ పొలం జోడించండి' : language === 'hi' ? '+ खेत जोड़ें' : '+ Add My Farm'}
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gradient-to-br from-emerald-800 via-teal-900 to-emerald-950 text-white rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">

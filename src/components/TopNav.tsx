@@ -20,10 +20,14 @@ export function TopNav() {
   const userRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const list = getStoredFarms();
-    const currentId = getActiveFarmId();
-    setFarms(list);
-    setActiveFarmState(currentId);
+    function refreshFarms() {
+      const list = getStoredFarms(user?.id);
+      const currentId = getActiveFarmId(user?.id);
+      setFarms(list);
+      setActiveFarmState(currentId || '');
+    }
+
+    refreshFarms();
 
     function handleClickOutside(e: MouseEvent) {
       if (farmRef.current && !farmRef.current.contains(e.target as Node)) {
@@ -34,14 +38,18 @@ export function TopNav() {
       }
     }
 
+    window.addEventListener('farmChanged', refreshFarms);
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    return () => {
+      window.removeEventListener('farmChanged', refreshFarms);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [user]);
 
-  const activeFarm = farms.find((f) => f.id === activeFarmId) || farms[0];
+  const activeFarm = farms.find((f) => f.id === activeFarmId) || farms[0] || null;
 
   const handleSelectFarm = (id: string) => {
-    setActiveFarmId(id);
+    setActiveFarmId(id, user?.id);
     setActiveFarmState(id);
     setIsFarmDropdownOpen(false);
     window.dispatchEvent(new CustomEvent('farmChanged', { detail: { farmId: id } }));
@@ -67,8 +75,8 @@ export function TopNav() {
 
         {/* Right Section: Farm Switcher, User Auth & Language */}
         <div className="flex items-center gap-2">
-          {/* Active Farm Switcher */}
-          {farms.length > 0 && (
+          {/* Active Farm Switcher or Add Farm Prompt */}
+          {farms.length > 0 ? (
             <div className="relative" ref={farmRef}>
               <button
                 type="button"
@@ -113,6 +121,14 @@ export function TopNav() {
                 </div>
               )}
             </div>
+          ) : (
+            <Link
+              href="/farms"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold text-emerald-900 transition-colors"
+            >
+              <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>+ {t.location.addFarmTitle}</span>
+            </Link>
           )}
 
           {/* User Auth: Profile Dropdown or Login Button */}

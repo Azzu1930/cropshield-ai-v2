@@ -4,19 +4,42 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { UserCheck, ArrowLeft, CheckCircle2, PhoneCall, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { getActiveFarm } from '@/lib/farm-store';
 
 export default function ExpertReviewPage() {
   const { t, language } = useLanguage();
-  const farm = getActiveFarm();
+  const { user } = useAuth();
+  const farm = getActiveFarm(user?.id);
   const [farmerNotes, setFarmerNotes] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone || '');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const scope = user?.id || 'anonymous';
+    const storageKey = `cropshield_expert_reviews_${scope}`;
+    const newRev = {
+      id: `exp-${Date.now()}`,
+      cropName: farm?.cropName || 'Field Crop',
+      status: 'pending' as const,
+      farmerNotes,
+      contactNumber: phoneNumber,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      const list = raw ? JSON.parse(raw) : [];
+      list.unshift(newRev);
+      localStorage.setItem(storageKey, JSON.stringify(list));
+    } catch {
+      // Ignore
+    }
+
     try {
       await fetch('/api/expert-review', {
         method: 'POST',
@@ -25,6 +48,8 @@ export default function ExpertReviewPage() {
           assessmentId: `expert-direct-${Date.now()}`,
           farmerNotes,
           contactNumber: phoneNumber,
+          cropName: farm?.cropName || 'Field Crop',
+          userId: user?.id,
         }),
       });
       setSubmitted(true);

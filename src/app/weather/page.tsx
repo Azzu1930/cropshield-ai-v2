@@ -14,14 +14,16 @@ import {
   Calendar,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAuth } from '@/lib/auth';
 import { getActiveFarm, type FarmRecord } from '@/lib/farm-store';
 import type { WeatherData } from '@/lib/supabase/database.types';
 
 export default function WeatherPage() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const [farm, setFarm] = useState<FarmRecord | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const loadWeather = async (activeFarm: FarmRecord) => {
     setLoading(true);
@@ -41,10 +43,14 @@ export default function WeatherPage() {
   };
 
   useEffect(() => {
-    const active = getActiveFarm();
+    const active = getActiveFarm(user?.id);
     setFarm(active);
-    loadWeather(active);
-  }, [language]);
+    if (active) {
+      loadWeather(active);
+    } else {
+      setLoading(false);
+    }
+  }, [user, language]);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in pb-16">
@@ -62,7 +68,7 @@ export default function WeatherPage() {
               <span>☀️</span> {t.homeCards.weather.title}
             </h1>
             <p className="text-sm font-semibold text-emerald-800 mt-0.5">
-              📍 {farm?.name} ({farm?.locality}, {farm?.district})
+              📍 {farm ? `${farm.name} (${farm.locality}, ${farm.district})` : 'Farm Location'}
             </p>
           </div>
         </div>
