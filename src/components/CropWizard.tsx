@@ -16,6 +16,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getActiveFarm, type FarmRecord } from '@/lib/farm-store';
 import { compressImage } from '@/lib/image-compressor';
 import { validateImageClient } from '@/lib/image-validator';
@@ -25,6 +27,7 @@ import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
 
 export function CropWizard() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -243,13 +246,52 @@ export function CropWizard() {
       try {
         const historyRaw = localStorage.getItem('cropshield_history');
         const historyList = historyRaw ? JSON.parse(historyRaw) : [];
-        historyList.unshift({
+        const entryId = data.id || `check-${Date.now()}`;
+        const newRecord = {
           ...data,
+          id: entryId,
           cropName: activeCropName,
           photoPreview,
           createdAt: new Date().toISOString(),
-        });
+          userId: user?.id,
+        };
+        historyList.unshift(newRecord);
         localStorage.setItem('cropshield_history', JSON.stringify(historyList.slice(0, 50)));
+
+        // Background sync to Supabase if authenticated with real session and farmId is available
+        if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+          const isValidUuid = (str?: string) =>
+            Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+
+          if (isValidUuid(user.id) && isValidUuid(farm?.id)) {
+            supabase
+              .from('assessments')
+              .insert({
+                user_id: user.id,
+                farm_id: farm!.id,
+                crop_name: activeCropName,
+                symptoms: selectedSymptoms,
+                water_level: waterLevel,
+                has_soil_report: hasSoilReport,
+                weather_snapshot: weather || {},
+                possible_issue: data.possibleIssue || 'General Crop Observation',
+                issue_category: data.issueCategory || 'general',
+                seriousness: data.seriousness || 'LOW',
+                confidence_level: data.confidenceLevel || 'MEDIUM',
+                confidence_score: data.confidenceScore || 0.85,
+                explanation: data.explanation || '',
+                why_reasons: data.whyReasons || [],
+                actions: data.actions || [],
+                previous_comparison: data.previousComparison || null,
+                is_preliminary: data.isPreliminary ?? false,
+                ai_provider: data.aiProvider || 'rule-based',
+                language: language,
+              } as any)
+              .then(({ error }: { error: any }) => {
+                if (error) console.warn('Supabase assessment insert notice:', error.message);
+              });
+          }
+        }
       } catch (saveErr) {
         console.warn('Could not save history locally:', saveErr);
       }

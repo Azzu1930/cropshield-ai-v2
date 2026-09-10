@@ -6,6 +6,7 @@ import { Sparkles, ShieldCheck, Sprout, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { WeatherCard } from '@/components/WeatherCard';
 import { HomeCards } from '@/components/HomeCards';
+import { RecentChecksSection } from '@/components/RecentChecksSection';
 
 export default function HomePage() {
   const { t, language } = useLanguage();
@@ -56,7 +57,10 @@ export default function HomePage() {
         <HomeCards />
       </section>
 
-      {/* 3. Farmer Safety Notice / Disclaimer */}
+      {/* 3. Recent Crop Checks & Previously Checked History */}
+      <RecentChecksSection />
+
+      {/* 4. Farmer Safety Notice / Disclaimer */}
       <footer className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
         <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
         <p className="leading-relaxed font-medium">

@@ -20,6 +20,39 @@ export interface TranslationDictionary {
     selectFarm: string;
     listen: string;
     stopListening: string;
+    login: string;
+    register: string;
+    logout: string;
+    profile: string;
+  };
+
+  auth: {
+    loginTitle: string;
+    loginSubtitle: string;
+    registerTitle: string;
+    registerSubtitle: string;
+    phoneTab: string;
+    emailTab: string;
+    fullName: string;
+    phoneNumber: string;
+    emailAddress: string;
+    password: string;
+    confirmPassword: string;
+    preferredLanguage: string;
+    loginBtn: string;
+    registerBtn: string;
+    demoLoginBtn: string;
+    noAccountPrompt: string;
+    haveAccountPrompt: string;
+    loginSuccess: string;
+    registerSuccess: string;
+    phoneOrEmailLabel: string;
+  };
+
+  recentChecks: {
+    title: string;
+    viewAll: string;
+    noChecksYet: string;
   };
 
   // 8 Home Screen Large Cards
