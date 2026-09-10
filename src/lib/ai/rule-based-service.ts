@@ -20,6 +20,9 @@ export class RuleBasedAIService implements AIService {
       language = 'en',
       imageDataUrl,
       imageValidation,
+      affectedArea,
+      durationDays,
+      previousCrop,
     } = params;
 
     const isTe = language === 'te';
@@ -60,6 +63,7 @@ export class RuleBasedAIService implements AIService {
     const hasDrying = symptoms.includes('drying') || symptoms.some(s => s.toLowerCase().includes('dry') || s.toLowerCase().includes('ఎండి') || s.toLowerCase().includes('सूख'));
     const hasWilting = symptoms.includes('wilting') || symptoms.some(s => s.toLowerCase().includes('wilt') || s.toLowerCase().includes('వడలి') || s.toLowerCase().includes('मुरझा'));
     const hasPoorGrowth = symptoms.includes('poorGrowth') || symptoms.some(s => s.toLowerCase().includes('growth') || s.toLowerCase().includes('ఎదుగుదల') || s.toLowerCase().includes('बढ़वार'));
+    const hasPodRot = symptoms.includes('podRot') || symptoms.some(s => s.toLowerCase().includes('pod') || s.toLowerCase().includes('కాయ') || s.toLowerCase().includes('కుళ్ళు') || s.toLowerCase().includes('सड़न') || s.toLowerCase().includes('फली'));
 
     const humidity = weatherData?.humidity ?? 72;
     const temp = weatherData?.temperature ?? 31;
@@ -530,7 +534,140 @@ export class RuleBasedAIService implements AIService {
     }
 
     // =========================================================================
-    // 6. OTHER / GENERAL CROPS (Groundnut, Mango, Pulses, Vegetables)
+    // 6. GROUNDNUT / PEANUT (వేరుశనగ / మూంగఫలీ)
+    // =========================================================================
+    else if (
+      cropKey.includes('groundnut') ||
+      cropKey.includes('peanut') ||
+      cropKey.includes('వేరుశనగ') ||
+      cropKey.includes('పల్లీ') ||
+      cropKey.includes('మూంగఫలీ') ||
+      cropKey.includes('मूंगफली')
+    ) {
+      if (hasPodRot || hasBrownSpots || hasDrying || (humidity > 70 && temp > 28)) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'fungal';
+        confidenceScore = 0.94;
+        if (language === 'te') {
+          possibleIssue = 'వేరుశనగలో కాయ కుళ్ళు తెగులు మరియు నల్ల మచ్చలు (Groundnut Pod Rot & Decay)';
+          explanation = 'కాయలపై నల్లటి మచ్చలు ఏర్పడి కాయ కుళ్ళిపోవడం నేలలోని శిలీంధ్రం (Rhizoctonia / Aspergillus / Pythium) మరియు అధిక తేమ వల్ల జరుగుతోంది.';
+          whyReasons.push('వేరుశనగ కాయలు మరియు పెంకులపై నల్లటి ఫంగస్ మచ్చలు స్పష్టంగా గుర్తించబడ్డాయి.');
+          whyReasons.push(`వాతావరణంలో తేమ ${humidity}% ఎక్కువగా ఉండటం నేలలోని శిలీంధ్రాల వ్యాప్తికి దోహదపడుతోంది.`);
+          actions.push('ఎకరాకు 200 నుండి 250 కిలోల వ్యవసాయ జిప్సం వేయండి (ఇది కాయ పెంకును గట్టిపరచి ఫంగస్ చొరబడకుండా చేస్తుంది).');
+          actions.push('ఎకరాకు 1-2 కిలోల ట్రైకోడెర్మా విరిడేను 100 కిలోల మాగిన పశువుల ఎరువుతో కలిపి నేలలో వేయండి.');
+          actions.push('టెబుకోనజోల్ 25.9% EC (1.5 మి.లీ/లీ) లేదా కార్బండజిమ్ + మాంకోజెబ్ (2 గ్రా/లీ) మొక్కల మొదళ్లు మరియు నేల తడిసేలా పిచికారీ చేయండి.');
+          actions.push('పొలంలో నీరు నిల్వ ఉండకుండా చూడండి మరియు కోత తర్వాత కాయలను తేమ 8% కంటే తగ్గేలా ఆరబెట్టండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मूंगफली में फली सड़न एवं कवक जनित काले धब्बे (Groundnut Pod Rot & Decay)';
+          explanation = 'फलियों पर काले धब्बे और सड़न मिट्टी जनित फंगस (राइजोक्टोनिया / एस्परजिलस) और अधिक नमी के कारण फैल रही है।';
+          whyReasons.push('मूंगफली की फलियों पर काले फंगल धब्बे और छिलके का क्षरण देखा गया है।');
+          whyReasons.push(`खेत में नमी और हवा में ${humidity}% आर्द्रता फफूंद प्रसार के अनुकूल है।`);
+          actions.push('प्रति एकड़ 200-250 किग्रा कृषि जिप्सम डालें, जो फलियों के छिलके को मजबूत बनाता है।');
+          actions.push('ट्राइकोडर्मा विरिडी (1-2 किग्रा को 100 किग्रा सड़ी गोबर खाद में मिलाकर) जड़ों के पास डालें।');
+          actions.push('टेबुकोनाजोल 25.9% EC (1.5 मिली/लीटर) या मैंकोजेब + कार्बेन्डाजिम (2 ग्राम/लीटर) का छिड़काव करें।');
+          actions.push('खेत में पानी का ठहराव रोकें और कटाई के बाद फलियों को अच्छी तरह धूप में सुखाएं।');
+        } else {
+          possibleIssue = 'Groundnut Pod Rot & Fungal Shell Decay (Rhizoctonia / Aspergillus / Pythium)';
+          explanation = 'Blackened necrotic lesions and shell decay on groundnut pods caused by soil-borne fungal pathogens under humid conditions.';
+          whyReasons.push('Distinct black necrotic fungal spots and shell discoloration observed on groundnut pods.');
+          whyReasons.push(`High soil moisture and ambient humidity (${humidity}%) promote subterranean fungal proliferation.`);
+          actions.push('Apply Agricultural Gypsum @ 200–250 kg/acre at pegging/pod formation to harden pod shells.');
+          actions.push('Soil application of Trichoderma viride (@ 1–2 kg mixed in 100 kg well-decomposed FYM/acre).');
+          actions.push('Foliar/soil-drench spray of Tebuconazole 25.9% EC @ 1.5 ml/L or Carbendazim + Mancozeb (Saaf) @ 2 g/L.');
+          actions.push('Ensure furrow drainage to avoid standing water, and cure harvested pods below 8% moisture to prevent aflatoxin.');
+        }
+      } else if (hasYellowLeaves) {
+        seriousness = 'MEDIUM';
+        issueCategory = 'fungal';
+        confidenceScore = 0.91;
+        if (language === 'te') {
+          possibleIssue = 'వేరుశనగలో తిక్కా ఆకుమచ్చ తెగులు (Tikka Leaf Spot)';
+          explanation = 'ఆకులపై పసుపు వలయంతో కూడిన ముదురు గోధుమ రంగు మచ్చలు సెర్కోస్పోరా ఫంగస్ వల్ల వచ్చాయి.';
+          whyReasons.push('ఆకులపై తిక్కా తెగులు నిర్దిష్ట గోధుమ మచ్చలు మరియు పసుపు అంచులు కనిపించాయి.');
+          actions.push('మాంకోజెబ్ (2.5 గ్రా/లీ) లేదా హెక్సాకోనజోల్ (2 మి.లీ/లీ) పిచికారీ చేయండి.');
+          actions.push('బాధిత పాత ఆకులను తీసివేసి నాశనం చేయండి.');
+          actions.push('గాలి వెలుతురు సోకేలా జాగ్రత్త తీసుకోండి.');
+          actions.push('10 రోజుల వ్యవధిలో అవసరమైతే మళ్లీ పిచికారీ చేయండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मूंगफली में टिक्का पत्ता धब्बा रोग (Tikka Disease)';
+          explanation = 'पत्तियों पर पीले घेरे वाले गहरे भूरे धब्बे सर्कोस्पोरा कवक के कारण हैं।';
+          whyReasons.push('पत्तियों पर टिक्का रोग के विशिष्ट लक्षण देखे गए हैं।');
+          actions.push('मैंकोजेब (2.5 ग्राम/लीटर) या हेक्साकोनाजोल (2 मिली/लीटर) का छिड़काव करें।');
+          actions.push('संक्रमित पत्तियों को खेत से बाहर निकालकर नष्ट करें।');
+          actions.push('फसल में हवा का संचार बनाए रखें।');
+          actions.push('10 दिन बाद आवश्यकतानुसार छिड़काव दोहराएं।');
+        } else {
+          possibleIssue = 'Groundnut Tikka Leaf Spot (Cercospora arachidicola)';
+          explanation = 'Dark brown circular necrotic lesions surrounded by chlorotic yellow halos on foliage.';
+          whyReasons.push('Diagnostic circular spots with yellow halos observed on groundnut leaves.');
+          actions.push('Apply Mancozeb (2.5g/L) or Hexaconazole 5% EC (2ml/L) foliar spray.');
+          actions.push('Remove and safely destroy heavily spotted lower leaves.');
+          actions.push('Ensure adequate aeration between plant rows.');
+          actions.push('Repeat spray after 10-12 days if disease pressure continues.');
+        }
+      } else if (hasWilting) {
+        seriousness = 'HIGH';
+        issueCategory = 'fungal';
+        confidenceScore = 0.92;
+        if (language === 'te') {
+          possibleIssue = 'వేరుశనగలో మొదలు కుళ్ళు లేదా కాండం కుళ్ళు తెగులు (Collar Rot / Stem Rot)';
+          explanation = 'మొక్క మొదలు వద్ద నల్లబడి వడలిపోవడం స్క్లెరోషియం ఫంగస్ వల్ల జరుగుతోంది.';
+          whyReasons.push('కాండం భూమిని తాకే ప్రాంతంలో కుళ్ళు మరియు మొక్కలు ఎండిపోవడం గుర్తించబడింది.');
+          actions.push('మొక్క మొదళ్ల చుట్టూ కార్బండజిమ్ (1 గ్రా/లీ) లేదా కాపర్ ఆక్సిక్లోరైడ్ (3 గ్రా/లీ) ద్రావణాన్ని తడపండి.');
+          actions.push('పొలంలో అధిక తేమ ఉండకుండా నీటిని వెంటనే బయటకు పంపండి.');
+          actions.push('భవిష్యత్తులో విత్తన శుద్ధి తప్పనిసరిగా చేయండి.');
+          actions.push('చనిపోయిన మొక్కలను వేర్లతో సహా తీసి కాల్చండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मूंगफली में कॉलर रॉट / तना सड़न रोग (Collar Rot)';
+          explanation = 'जड़ के पास तने का काला पड़ना और पौधे का मुरझाना स्क्लेरोशियम फंगस का लक्षण है।';
+          whyReasons.push('जमीन की सतह पर तने का सड़ना और मुरझाना पाया गया है।');
+          actions.push('पौधों के आधार पर कार्बेन्डाजिम (1 ग्राम/लीटर) के घोल से ड्रेन्चिंग करें।');
+          actions.push('खेत से अतिरिक्त पानी की निकासी तुरंत करें।');
+          actions.push('रोगग्रस्त पौधों को उखाड़कर खेत से दूर नष्ट करें।');
+          actions.push('अगली बुवाई से पहले बीजोपचार अवश्य करें।');
+        } else {
+          possibleIssue = 'Groundnut Collar Rot & Stem Blight (Sclerotium rolfsii)';
+          explanation = 'Dark collar lesions near the soil surface leading to sudden plant wilting and collapse.';
+          whyReasons.push('Collar rot girdling at ground level with wilting canopy.');
+          actions.push('Drench collar zone with Carbendazim (1g/L) or Tebuconazole (1ml/L).');
+          actions.push('Ensure zero water stagnation around crop root zones.');
+          actions.push('Rogue out and destroy infected wilted plants.');
+          actions.push('Strictly practice seed treatment with Trichoderma or Thiram for subsequent sowings.');
+        }
+      } else {
+        seriousness = 'LOW';
+        issueCategory = 'healthy';
+        confidenceScore = 0.93;
+        if (language === 'te') {
+          possibleIssue = 'వేరుశనగ పంట సాధారణంగా ఉంది — కాయ ఊరడానికి యాజమాన్యం';
+          explanation = 'తీవ్రమైన తెగుళ్లు లేవు. కాయలు నిండుగా పెరగడానికి సరైన పోషకాలు అందించండి.';
+          whyReasons.push('ఆకులు మరియు పంట సహజ స్థితిలో ఉన్నాయి.');
+          actions.push('ఎకరాకు 200 కిలోల జిప్సం వేసి తేలికపాటి తడి ఇవ్వండి.');
+          actions.push('బోరాన్ (1 గ్రా/లీ) పిచికారీ చేసి కాయ నాణ్యత పెంచండి.');
+          actions.push('కలుపు లేకుండా పొలాన్ని శుభ్రంగా ఉంచండి.');
+          actions.push('క్రమం తప్పకుండా నీటి తడులు ఇవ్వండి.');
+        } else if (language === 'hi') {
+          possibleIssue = 'मूंगफली की फसल सामान्य स्थिति में है — फली भराव प्रबंधन';
+          explanation = 'फसल स्वस्थ है। फली के अच्छे भराव के लिए जिप्सम और सूक्ष्म पोषक तत्व दें।';
+          whyReasons.push('पत्तियां एवं पौधे सामान्य रूप से स्वस्थ हैं।');
+          actions.push('200 किग्रा जिप्सम प्रति एकड़ डालकर हल्की सिंचाई करें।');
+          actions.push('बोरोन (1 ग्राम/लीटर) का छिड़काव फली की गुणवत्ता बढ़ाएगा।');
+          actions.push('खेत को खरपतवार मुक्त रखें।');
+          actions.push('नियमित अंतराल पर हल्की सिंचाई दें।');
+        } else {
+          possibleIssue = 'Groundnut Crop in Good Condition — Pod Filling Care';
+          explanation = 'No severe foliar or subterranean diseases detected. Optimize calcium and boron nutrition.';
+          whyReasons.push('Vigorous foliage with healthy peg penetration.');
+          actions.push('Top-dress Agricultural Gypsum @ 200 kg/acre followed by light irrigation.');
+          actions.push('Apply foliar Boron (1g/L) to enhance kernel development and oil content.');
+          actions.push('Keep the field free of competing weeds.');
+          actions.push('Maintain optimum moisture during pod filling without waterlogging.');
+        }
+      }
+    }
+
+    // =========================================================================
+    // 7. OTHER / GENERAL CROPS (Mango, Pulses, Vegetables)
     // =========================================================================
     else {
       if (hasInsects) {
@@ -619,6 +756,68 @@ export class RuleBasedAIService implements AIService {
           actions.push('Maintain scheduled balanced irrigation.');
           actions.push('Keep field clean of competing weeds.');
           actions.push('Perform routine weekly health checks.');
+        }
+      }
+    }
+
+    // =========================================================================
+    // MULTI-EVIDENCE ENRICHMENT: FIELD IMPACT, DURATION & CROP ROTATION
+    // =========================================================================
+    if (affectedArea) {
+      if (affectedArea.includes('> 50') || affectedArea.includes('more than 50')) {
+        seriousness = 'HIGH';
+        if (language === 'te') {
+          whyReasons.push('పొలంలో 50% కంటే ఎక్కువ పంటకు తెగులు వ్యాపించినందున అత్యవసర సమగ్ర చర్యలు అవసరం.');
+          actions.unshift('మొత్తం పొలం అంతటా తక్షణమే అత్యవసర పిచికారీ చేసి పంట నష్టాన్ని నివారించండి.');
+        } else if (language === 'hi') {
+          whyReasons.push('खेत में 50% से अधिक फसल प्रभावित होने के कारण आपातकालीन उपचार आवश्यक है।');
+          actions.unshift('पूरे खेत में तुरंत आपातकालीन सुरक्षात्मक छिड़काव करें।');
+        } else {
+          whyReasons.push('Over 50% of the field area is affected, requiring urgent whole-field intervention.');
+          actions.unshift('Perform immediate whole-field curative spray to arrest widespread yield loss.');
+        }
+      } else if (affectedArea.includes('< 10') || affectedArea.includes('less than 10')) {
+        if (language === 'te') {
+          whyReasons.push('సమస్య ప్రారంభ దశలోనే (10% లోపు) గుర్తించబడింది.');
+          actions.push('సమస్య ఉన్న ప్రదేశాలలో మాత్రమే మందు పిచికారీ చేస్తే సరిపోతుంది.');
+        } else if (language === 'hi') {
+          whyReasons.push('समस्या शुरुआती स्तर (10% से कम) पर ही पहचानी गई है।');
+          actions.push('केवल प्रभावित पौधों और स्थानों पर ही लक्षित छिड़काव करें।');
+        } else {
+          whyReasons.push('Early localized onset (< 10% area) detected.');
+          actions.push('Targeted spot-spraying on affected patches is sufficient without blanket field application.');
+        }
+      }
+    }
+
+    if (durationDays) {
+      if (durationDays.includes('> 14') || durationDays.includes('more than 14')) {
+        seriousness = 'HIGH';
+        if (language === 'te') {
+          whyReasons.push('సమస్య 14 రోజులకు పైగా ఉండటం వల్ల వ్యాధి కణజాలంలోకి పాతుకుపోయింది.');
+          actions.push('సాధారణ స్పర్శ మందుల కంటే అంతర్వాహిక (సిస్టమిక్) శిలీంధ్ర నాశినులను మాత్రమే వాడండి.');
+        } else if (language === 'hi') {
+          whyReasons.push('समस्या 14 दिनों से अधिक समय से बनी हुई है, जिससे फंगस गहराई में फैल चुकी है।');
+          actions.push('गहरे उपचार के लिए अंतर्प्रवाही (सिस्टमिक) कवकनाशी का ही उपयोग करें।');
+        } else {
+          whyReasons.push('Symptoms have persisted for over 14 days, establishing deep mycelial infection.');
+          actions.push('Use systemic curative fungicides rather than contact sprays for deep tissue translocation.');
+        }
+      }
+    }
+
+    if (previousCrop) {
+      const prev = previousCrop.toLowerCase();
+      if (prev.includes('groundnut') || prev.includes('pulses') || prev.includes('వేరుశనగ') || prev.includes('పప్పు') || prev.includes('मूंगफली')) {
+        if (language === 'te') {
+          whyReasons.push('గతంలో కూడా పప్పు దినుసులు/వేరుశనగ వేయడం వల్ల నేలలో ఫంగస్ అవశేషాలు ఎక్కువగా మిగిలి ఉన్నాయి.');
+          actions.push('తదుపరి పంటగా జొన్న, మొక్కజొన్న లేదా రాగులను పంట మార్పిడిగా వేసి నేల వ్యాధులను అరికట్టండి.');
+        } else if (language === 'hi') {
+          whyReasons.push('पिछली बार भी दलहन/मूंगफली बोने से मिट्टी में फंगल अवशेषों का संचय अधिक है।');
+          actions.push('अगले सीजन में ज्वार, मक्का या बाजरा की फसल चक्र अपनाकर मिट्टी जनित रोगों को तोड़ें।');
+        } else {
+          whyReasons.push('Previous cultivation of legumes/groundnut carries high risk of soil-borne fungal inoculum buildup.');
+          actions.push('Rotate field with non-host cereal crops (Sorghum, Pearl Millet, Maize) next season to break pathogen survival.');
         }
       }
     }

@@ -38,6 +38,9 @@ export interface CropAnalysisParams {
     date: string;
   };
   language: SupportedLanguage;
+  affectedArea?: string;
+  durationDays?: string;
+  previousCrop?: string;
 }
 
 export interface CropAnalysisResult {

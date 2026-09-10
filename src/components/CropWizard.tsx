@@ -22,6 +22,8 @@ import { getActiveFarm, type FarmRecord } from '@/lib/farm-store';
 import { compressImage } from '@/lib/image-compressor';
 import { validateImageClient } from '@/lib/image-validator';
 import { SimpleResultView } from './SimpleResultView';
+import { LiveVoiceAssistant } from './LiveVoiceAssistant';
+import type { ParsedSpeechData } from '@/lib/ai/speech-command-parser';
 import type { WeatherData } from '@/lib/supabase/database.types';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
 
@@ -131,7 +133,12 @@ export function CropWizard() {
   // Step 3: Symptoms (multi-select)
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
 
-  // Step 4: Water
+  // Step 4: Field Impact & Crop History
+  const [affectedArea, setAffectedArea] = useState<string>('< 10%');
+  const [durationDays, setDurationDays] = useState<string>('1 - 3 days');
+  const [previousCrop, setPreviousCrop] = useState<string>('Groundnut / Pulses (Gram, Soy)');
+
+  // Step 5: Water
   const [waterLevel, setWaterLevel] = useState<'less' | 'normal' | 'more'>('normal');
   const [waterAmount, setWaterAmount] = useState<string>('');
 
@@ -185,6 +192,7 @@ export function CropWizard() {
   const symptomsList = [
     { id: 'yellowLeaves', label: t.wizard.symptoms.yellowLeaves, color: 'border-amber-300' },
     { id: 'brownSpots', label: t.wizard.symptoms.brownSpots, color: 'border-yellow-700' },
+    { id: 'podRot', label: t.wizard.symptoms.podRot, color: 'border-stone-600' },
     { id: 'insects', label: t.wizard.symptoms.insects, color: 'border-emerald-500' },
     { id: 'drying', label: t.wizard.symptoms.drying, color: 'border-orange-400' },
     { id: 'wilting', label: t.wizard.symptoms.wilting, color: 'border-blue-400' },
@@ -205,6 +213,30 @@ export function CropWizard() {
     }
   };
 
+  const handleVoiceExtracted = (data: ParsedSpeechData) => {
+    if (data.crop) {
+      setSelectedCrop(data.crop);
+    }
+    if (data.symptoms.length > 0) {
+      setSelectedSymptoms((prev) => {
+        const set = new Set([...prev.filter((s) => s !== 'dontKnow'), ...data.symptoms]);
+        return Array.from(set);
+      });
+    }
+    if (data.affectedArea) {
+      setAffectedArea(data.affectedArea);
+    }
+    if (data.durationDays) {
+      setDurationDays(data.durationDays);
+    }
+    if (data.waterLevel) {
+      setWaterLevel(data.waterLevel);
+    }
+    if (data.previousCrop) {
+      setPreviousCrop(data.previousCrop);
+    }
+  };
+
   // Step 2: Photo Upload & Canvas Validation/Compression
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -220,7 +252,8 @@ export function CropWizard() {
       // 2. Validate using canvas chroma inspection covering 100% of the image
       const tempImg = new Image();
       tempImg.onload = () => {
-        const validation = validateImageClient(tempImg);
+        const activeCropName = selectedCrop === 'Other' ? (customCrop || 'Crop') : selectedCrop;
+        const validation = validateImageClient(tempImg, activeCropName);
 
         if (!validation.isValid) {
           setPhotoPreview(null);
@@ -259,9 +292,9 @@ export function CropWizard() {
     }
   };
 
-  // Run Step 7 Animated Sequence & Submit to AI Analysis
+  // Run Step 8 Animated Sequence & Submit to AI Analysis
   const executeAnalysis = async () => {
-    setCurrentStep(7);
+    setCurrentStep(8);
     setProgressStep(0);
     setAnalysisError(null);
 
@@ -303,6 +336,9 @@ export function CropWizard() {
         body: JSON.stringify({
           cropName: activeCropName,
           symptoms: selectedSymptoms,
+          affectedArea,
+          durationDays,
+          previousCrop,
           waterLevel,
           waterAmount,
           hasSoilReport,
@@ -349,7 +385,7 @@ export function CropWizard() {
           });
           setTimeout(() => {
             clearInterval(progressInterval);
-            setCurrentStep(8);
+            setCurrentStep(9);
           }, 1500);
           return;
         }
@@ -418,7 +454,7 @@ export function CropWizard() {
       // Wait for progress animation to finish
       setTimeout(() => {
         clearInterval(progressInterval);
-        setCurrentStep(8); // Show result view
+        setCurrentStep(9); // Show result view
       }, 3000);
     } catch (err: any) {
       clearInterval(progressInterval);
@@ -427,7 +463,7 @@ export function CropWizard() {
   };
 
   // If in Result View
-  if (currentStep === 8 && analysisResult) {
+  if (currentStep === 9 && analysisResult) {
     return (
       <SimpleResultView
         result={analysisResult}
@@ -446,20 +482,29 @@ export function CropWizard() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-20">
+      {/* Live Voice Assistant (Multilingual English, Telugu, Hindi) */}
+      {currentStep <= 7 && (
+        <LiveVoiceAssistant
+          hasPhoto={Boolean(photoPreview)}
+          onExtracted={handleVoiceExtracted}
+          onRequestPhotoUpload={() => setCurrentStep(2)}
+        />
+      )}
+
       {/* Wizard Step Progress Header */}
-      {currentStep <= 6 && (
+      {currentStep <= 7 && (
         <div className="bg-white rounded-3xl p-5 border border-emerald-100 shadow-sm space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-gray-500">
-            <span>Step {currentStep} of 6</span>
+            <span>Step {currentStep} of 7</span>
             <span className="text-emerald-700 font-extrabold">
-              {Math.round((currentStep / 6) * 100)}% Completed
+              {Math.round((currentStep / 7) * 100)}% Completed
             </span>
           </div>
           {/* Progress Bar */}
           <div className="w-full bg-emerald-100 h-2.5 rounded-full overflow-hidden">
             <div
               className="bg-gradient-to-r from-emerald-500 to-green-600 h-full rounded-full transition-all duration-300"
-              style={{ width: `${(currentStep / 6) * 100}%` }}
+              style={{ width: `${(currentStep / 7) * 100}%` }}
             />
           </div>
         </div>
@@ -729,9 +774,139 @@ export function CropWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 4: How much water did you give? */}
+      {/* STEP 4: Field Impact & Crop History */}
       {/* ============================================================ */}
       {currentStep === 4 && (
+        <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-emerald-200 shadow-lg space-y-6 animate-in fade-in">
+          <div>
+            <h2 className="text-2xl font-black text-gray-900 leading-tight">
+              {t.wizard.fieldImpact.title}
+            </h2>
+            <p className="text-sm font-medium text-gray-500 mt-1">
+              {t.wizard.fieldImpact.subtitle}
+            </p>
+          </div>
+
+          {/* Question 1: How much area was affected? */}
+          <div className="space-y-2.5">
+            <label className="block text-sm font-bold text-gray-800">
+              📍 {t.wizard.fieldImpact.areaQuestion}
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {[
+                { id: '< 10%', label: t.wizard.fieldImpact.areas.lessThan10 },
+                { id: '10% - 25%', label: t.wizard.fieldImpact.areas.from10to25 },
+                { id: '25% - 50%', label: t.wizard.fieldImpact.areas.from25to50 },
+                { id: '> 50%', label: t.wizard.fieldImpact.areas.moreThan50 },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setAffectedArea(item.id)}
+                  className={`p-3.5 rounded-2xl border-2 text-left font-semibold text-sm transition-all flex items-center justify-between ${
+                    affectedArea === item.id
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs'
+                      : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  {affectedArea === item.id && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Question 2: From how many days onwards? */}
+          <div className="space-y-2.5 pt-2 border-t border-gray-100">
+            <label className="block text-sm font-bold text-gray-800">
+              ⏱️ {t.wizard.fieldImpact.durationQuestion}
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {[
+                { id: '1 - 3 days', label: t.wizard.fieldImpact.durations.days1to3 },
+                { id: '4 - 7 days', label: t.wizard.fieldImpact.durations.days4to7 },
+                { id: '8 - 14 days', label: t.wizard.fieldImpact.durations.days8to14 },
+                { id: '> 14 days', label: t.wizard.fieldImpact.durations.moreThan14 },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setDurationDays(item.id)}
+                  className={`p-3.5 rounded-2xl border-2 text-left font-semibold text-sm transition-all flex items-center justify-between ${
+                    durationDays === item.id
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs'
+                      : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  {durationDays === item.id && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Question 3: Previous crop on this land? */}
+          <div className="space-y-2.5 pt-2 border-t border-gray-100">
+            <label className="block text-sm font-bold text-gray-800">
+              🔄 {t.wizard.fieldImpact.previousCropQuestion}
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {[
+                { id: 'Groundnut / Pulses', label: t.wizard.fieldImpact.previousCrops.groundnutPulses },
+                { id: 'Paddy / Rice', label: t.wizard.fieldImpact.previousCrops.paddyRice },
+                { id: 'Cotton', label: t.wizard.fieldImpact.previousCrops.cotton },
+                { id: 'Maize / Millets', label: t.wizard.fieldImpact.previousCrops.maizeMillets },
+                { id: 'Vegetables', label: t.wizard.fieldImpact.previousCrops.vegetables },
+                { id: 'Fallow / First time', label: t.wizard.fieldImpact.previousCrops.fallowVirgin },
+                { id: 'Other', label: t.wizard.fieldImpact.previousCrops.other },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setPreviousCrop(item.id)}
+                  className={`p-3.5 rounded-2xl border-2 text-left font-semibold text-sm transition-all flex items-center justify-between ${
+                    previousCrop === item.id
+                      ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs'
+                      : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                  {previousCrop === item.id && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-4 flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setCurrentStep(3)}
+              className="px-6 py-3.5 rounded-2xl border-2 border-gray-300 text-gray-700 font-bold text-sm"
+            >
+              {t.wizard.buttons.back}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentStep(5)}
+              className="px-8 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-base shadow-md flex items-center gap-2"
+            >
+              <span>{t.wizard.buttons.next}</span>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* STEP 5: How much water did you give? */}
+      {/* ============================================================ */}
+      {currentStep === 5 && (
         <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-emerald-200 shadow-lg space-y-6 animate-in fade-in">
           <div>
             <h2 className="text-2xl font-black text-gray-900 leading-tight">
@@ -781,14 +956,14 @@ export function CropWizard() {
           <div className="pt-4 flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setCurrentStep(3)}
+              onClick={() => setCurrentStep(4)}
               className="px-6 py-3.5 rounded-2xl border-2 border-gray-300 text-gray-700 font-bold text-sm"
             >
               {t.wizard.buttons.back}
             </button>
             <button
               type="button"
-              onClick={() => setCurrentStep(5)}
+              onClick={() => setCurrentStep(6)}
               className="px-8 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-base shadow-md flex items-center gap-2"
             >
               <span>{t.wizard.buttons.next}</span>
@@ -799,9 +974,9 @@ export function CropWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 5: Do you have a soil test? */}
+      {/* STEP 6: Do you have a soil test? */}
       {/* ============================================================ */}
-      {currentStep === 5 && (
+      {currentStep === 6 && (
         <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-emerald-200 shadow-lg space-y-6 animate-in fade-in">
           <div>
             <h2 className="text-2xl font-black text-gray-900 leading-tight">
@@ -834,7 +1009,7 @@ export function CropWizard() {
               onClick={() => {
                 setHasSoilReport(false);
                 setSoilPh('');
-                setCurrentStep(6);
+                setCurrentStep(7);
               }}
               className="p-6 rounded-3xl border-2 border-gray-200 bg-white hover:bg-gray-50 text-left transition-all flex flex-col gap-2"
             >
@@ -867,14 +1042,14 @@ export function CropWizard() {
           <div className="pt-4 flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setCurrentStep(4)}
+              onClick={() => setCurrentStep(5)}
               className="px-6 py-3.5 rounded-2xl border-2 border-gray-300 text-gray-700 font-bold text-sm"
             >
               {t.wizard.buttons.back}
             </button>
             <button
               type="button"
-              onClick={() => setCurrentStep(6)}
+              onClick={() => setCurrentStep(7)}
               className="px-8 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-base shadow-md flex items-center gap-2"
             >
               <span>{t.wizard.buttons.next}</span>
@@ -885,9 +1060,9 @@ export function CropWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 6: AUTOMATIC WEATHER (Zero farmer typing) */}
+      {/* STEP 7: AUTOMATIC WEATHER (Zero farmer typing) */}
       {/* ============================================================ */}
-      {currentStep === 6 && (
+      {currentStep === 7 && (
         <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-emerald-200 shadow-lg space-y-6 animate-in fade-in">
           <div>
             <h2 className="text-2xl font-black text-gray-900 leading-tight">
@@ -943,7 +1118,7 @@ export function CropWizard() {
           <div className="pt-4 flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setCurrentStep(5)}
+              onClick={() => setCurrentStep(6)}
               className="px-6 py-3.5 rounded-2xl border-2 border-gray-300 text-gray-700 font-bold text-sm"
             >
               {t.wizard.buttons.back}
@@ -961,9 +1136,9 @@ export function CropWizard() {
       )}
 
       {/* ============================================================ */}
-      {/* STEP 7: Animated Progress Sequence */}
+      {/* STEP 8: Animated Progress Sequence */}
       {/* ============================================================ */}
-      {currentStep === 7 && (
+      {currentStep === 8 && (
         <div className="bg-white rounded-3xl p-8 border-2 border-emerald-300 shadow-xl space-y-6 text-center animate-in fade-in">
           <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
             <Loader2 className="w-8 h-8 animate-spin" />

@@ -140,7 +140,50 @@ export const en: TranslationDictionary = {
       drying: 'Leaves drying or scorching',
       wilting: 'Plant wilting or drooping',
       poorGrowth: 'Stunted or poor growth',
+      podRot: 'Pod rot / Black spots on pods',
       dontKnow: 'General check / Unsure',
+    },
+
+    fieldImpact: {
+      title: 'Field Impact & History',
+      subtitle: 'Tell us about the spread of the issue and previous farming history:',
+      areaQuestion: 'How much of your field or crop area is affected?',
+      durationQuestion: 'From how many days onwards has this issue been observed?',
+      previousCropQuestion: 'What was the previous crop grown on this land?',
+      areas: {
+        lessThan10: '< 10% (Isolated spots)',
+        from10to25: '10% - 25% (Mild spread)',
+        from25to50: '25% - 50% (Moderate area)',
+        moreThan50: '> 50% (Severe whole-field spread)',
+      },
+      durations: {
+        days1to3: '1 - 3 days (Just started)',
+        days4to7: '4 - 7 days (Past week)',
+        days8to14: '8 - 14 days (1 to 2 weeks)',
+        moreThan14: '> 14 days (More than 2 weeks)',
+      },
+      previousCrops: {
+        groundnutPulses: 'Groundnut / Pulses (Gram, Soy)',
+        paddyRice: 'Paddy / Rice',
+        cotton: 'Cotton',
+        maizeMillets: 'Maize / Millets',
+        vegetables: 'Vegetables (Chilli, Tomato)',
+        fallowVirgin: 'Left Fallow / First time',
+        other: 'Other / Mixed',
+      },
+    },
+
+    voice: {
+      startListening: 'Voice Assistant — Speak to Check',
+      stopListening: 'Stop Listening',
+      listeningStatus: 'Listening in English... Speak your crop, symptoms, or area',
+      processing: 'Understanding your voice...',
+      speakNow: 'Listening... (Speak now)',
+      detectedPrompt: 'Captured from voice:',
+      uploadPhotoPrompt: 'Crop details noted! Please take or upload a photo of your crop so I can inspect it.',
+      micPermissionDenied: 'Microphone permission was denied. Please allow microphone access to speak.',
+      notSupported: 'Live speech detection is not supported in this browser.',
+      clickOrSpeakHelp: 'You can tap the microphone and speak freely instead of manual selection.',
     },
 
     water: {

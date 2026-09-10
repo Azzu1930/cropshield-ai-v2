@@ -33,18 +33,22 @@ export class GeminiAIService implements AIService {
         imageDataUrl,
         previousAssessment,
         language = 'en',
+        affectedArea,
+        durationDays,
+        previousCrop,
       } = params;
 
       const langName = language === 'te' ? 'Telugu' : language === 'hi' ? 'Hindi' : 'English';
 
       const prompt = `You are CropShield AI, an elite agronomist and crop disease pathologist specializing in Indian agriculture (ICAR/KVK standards).
-Analyze the multi-evidence agricultural data and the provided crop leaf image.
+Analyze the multi-evidence agricultural data and the provided crop photo (which can be a leaf, plant, branch, fruit, pod, seed, grain, or tuber).
 
 TARGET LANGUAGE: ${langName}
 CRITICAL ACCURACY & CROP VALIDATION RULES:
 0. STRICT CROP IMAGE GATEKEEPER:
-   First, inspect the uploaded photo. Check whether it is an actual agricultural crop, farm plant, leaf, flower, fruit, or farm vegetation.
-   If the image is a person, human selfie, car, vehicle, indoor room, furniture, pet, animal, computer or mobile screen, document, paper, or random non-agricultural object:
+   First, inspect the uploaded photo. Check whether it contains an actual agricultural crop, plant, leaf, flower, fruit, pod, seed, grain, tuber, root, or farm vegetation.
+   - Note: Groundnut pods/peanuts in shells, cotton bolls, potatoes, cereals, and dry legume pods are valid agricultural produce!
+   If the image is a person, human selfie, face, car, vehicle, indoor room, furniture, pet, animal, computer or mobile screen, document, paper, or random non-agricultural object:
    YOU MUST RETURN:
    {
      "isCropDetected": false,
@@ -59,20 +63,28 @@ CRITICAL ACCURACY & CROP VALIDATION RULES:
    }
    Do NOT provide any crop diagnosis, diseases, or remedies for non-crop images.
 
-1. Only if the photo is an actual crop, plant, or leaf, proceed with detailed diagnosis:
-   Examine the uploaded photo carefully (look for circular lesions, target-like concentric rings, pustules, chlorosis, vein clearing, curling, insect bites, or healthy turgor).
+1. Only if the photo is an actual crop, plant, leaf, fruit, or pod, proceed with detailed diagnosis:
+   Examine the photo carefully (look for circular lesions, target-like rings, pustules, chlorosis, vein clearing, curling, insect bites, or dark fungal rot spots on pods).
 2. The diagnosis ("possibleIssue") and 4 action steps MUST be strictly specific to the crop: "${cropName}".
+   - For Groundnut / Peanut: Distinguish between Pod Rot / Black Pod Spots (Rhizoctonia/Aspergillus/Pythium), Tikka Leaf Spot (Cercospora with yellow halo), Collar Rot (Sclerotium rolfsii), Rust (Puccinia arachidis), or Sucking pests. If pods have dark spots/lesions, diagnose Groundnut Pod Rot and prescribe Gypsum (200-250 kg/acre), Trichoderma viride enriched FYM, and Tebuconazole (1.5 ml/L) or Carbendazim+Mancozeb.
    - For Tomato: Distinguish between Early Blight (Alternaria), Late Blight, Tomato Leaf Curl Virus, Fruit Borer, or Blossom End Rot.
    - For Rice: Distinguish between Blast, Brown Spot, BLB, Stem Borer, or BPH.
    - For Chilli: Distinguish between Thrips/Mite Leaf Curl, Anthracnose Dieback, or Powdery Mildew.
    - For Cotton: Distinguish between Pink Bollworm, Leaf Reddening, or Angular Leaf Spot.
    - For Maize: Distinguish between Fall Armyworm, Turcicum Blight, or Nitrogen deficiency.
-3. NEVER return generic identical advice! Provide specific remedy prescriptions (e.g. Neem oil 5ml/L, Mancozeb 2.5g/L, blue traps for thrips, AWD drainage for rice).
-4. All text fields MUST be ENTIRELY in ${langName} using respectful, empathetic words that rural farmers easily grasp.
+3. INCORPORATE FIELD IMPACT & ROTATION EVIDENCE:
+   - Area affected: ${affectedArea || 'Localized (< 10%)'} -> If > 50%, advise urgent whole-field emergency treatment. If < 10%, recommend targeted spot application.
+   - Duration of issue: ${durationDays || 'Recent (1 - 3 days)'} -> If > 14 days, prescribe systemic curative fungicides. If 1-3 days, prescribe contact/biological preventive measures.
+   - Previous crop on this land: ${previousCrop || 'None'} -> If previous crop was Groundnut or Pulses, warn about soil-borne inoculum carryover and advise crop rotation.
+4. NEVER return generic identical advice! Provide specific chemical/organic names with exact dosages (e.g. Gypsum @ 200kg/acre, Neem oil 5ml/L, Mancozeb 2.5g/L, Tebuconazole 1.5ml/L).
+5. All text fields MUST be ENTIRELY in ${langName} using respectful, empathetic words that rural farmers easily grasp.
 
 EVIDENCE COLLECTED:
 - Crop: ${cropName}
 - Observed symptoms: ${symptoms.join(', ') || 'General check'}
+- Area of field affected: ${affectedArea || 'Unspecified'}
+- Duration of symptoms: ${durationDays || 'Unspecified'}
+- Previous crop grown: ${previousCrop || 'Unspecified'}
 - Irrigation / Water given: ${waterLevel} ${waterAmount ? `(${waterAmount})` : ''}
 - Weather context: Temperature ${weatherData?.temperature ?? 30}°C, Humidity ${weatherData?.humidity ?? 70}%, Rain Probability ${weatherData?.rainProbability ?? 20}%, Condition: ${weatherData?.weatherCondition ?? 'Clear'}
 - Farm Location: ${farmLocation?.locality || ''}, ${farmLocation?.district || ''}, ${farmLocation?.state || ''}
@@ -87,16 +99,16 @@ Respond ONLY with a valid JSON object matching this schema:
   "seriousness": "LOW" | "MEDIUM" | "HIGH",
   "confidenceLevel": "LOW" | "MEDIUM" | "HIGH",
   "confidenceScore": 0.88,
-  "explanation": "2 simple sentences in ${langName} explaining what is observed in this ${cropName} photo and weather",
+  "explanation": "2 simple sentences in ${langName} explaining what is observed in this ${cropName} photo, field spread (${affectedArea || ''}), and weather",
   "whyReasons": [
     "Visual evidence from photo for ${cropName} in ${langName}",
-    "Weather/humidity/irrigation correlation in ${langName}",
-    "Biological reason in ${langName}"
+    "Field impact and duration correlation in ${langName}",
+    "Biological reason and crop rotation risk in ${langName}"
   ],
   "actions": [
-    "Specific immediate curative/preventive step 1 in ${langName}",
-    "Specific chemical/organic remedy with dosage in ${langName}",
-    "Field hygiene / moisture management step in ${langName}",
+    "Specific immediate curative/preventive step 1 with dosage in ${langName}",
+    "Specific chemical/organic remedy with exact dosage in ${langName}",
+    "Field hygiene, gypsum/soil treatment, or moisture management step in ${langName}",
     "Follow-up instruction in ${langName}"
   ],
   "previousComparison": {

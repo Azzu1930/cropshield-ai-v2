@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
       language = 'en',
       farmId,
       userId,
+      affectedArea,
+      durationDays,
+      previousCrop,
     } = body;
 
     if (!cropName) {
@@ -61,6 +64,9 @@ export async function POST(request: NextRequest) {
       imageValidation: body.imageValidation,
       previousAssessment,
       language: (language as SupportedLanguage) || 'en',
+      affectedArea,
+      durationDays,
+      previousCrop,
     };
 
     // Perform analysis through AIService (Gemini or RuleBased fallback)

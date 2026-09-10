@@ -123,7 +123,52 @@ export interface TranslationDictionary {
       drying: string;
       wilting: string;
       poorGrowth: string;
+      podRot: string;
       dontKnow: string;
+    };
+
+    // Step 4 Field Impact & History
+    fieldImpact: {
+      title: string;
+      subtitle: string;
+      areaQuestion: string;
+      durationQuestion: string;
+      previousCropQuestion: string;
+      areas: {
+        lessThan10: string;
+        from10to25: string;
+        from25to50: string;
+        moreThan50: string;
+      };
+      durations: {
+        days1to3: string;
+        days4to7: string;
+        days8to14: string;
+        moreThan14: string;
+      };
+      previousCrops: {
+        groundnutPulses: string;
+        paddyRice: string;
+        cotton: string;
+        maizeMillets: string;
+        vegetables: string;
+        fallowVirgin: string;
+        other: string;
+      };
+    };
+
+    // Live Voice Assistant
+    voice: {
+      startListening: string;
+      stopListening: string;
+      listeningStatus: string;
+      processing: string;
+      speakNow: string;
+      detectedPrompt: string;
+      uploadPhotoPrompt: string;
+      micPermissionDenied: string;
+      notSupported: string;
+      clickOrSpeakHelp: string;
     };
 
     // Step 4 Water
