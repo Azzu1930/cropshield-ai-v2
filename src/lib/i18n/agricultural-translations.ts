@@ -740,3 +740,35 @@ export function getLocalizedResultContent(
     previousComparison: localizedComparison,
   };
 }
+
+/**
+ * Returns localized name for common crops in Telugu, Hindi, or English.
+ */
+export function getLocalizedCropName(crop: string | null | undefined, lang: SupportedLanguage = 'en'): string {
+  if (!crop) return '';
+  const c = crop.toLowerCase();
+
+  if (c.includes('groundnut') || c.includes('peanut') || c.includes('వేరుశనగ') || c.includes('మూంగఫలీ')) {
+    return lang === 'te' ? 'వేరుశనగ' : lang === 'hi' ? 'मूंगफली' : 'Groundnut';
+  }
+  if (c.includes('tomato') || c.includes('టమాట') || c.includes('టమోటా') || c.includes('टमाटर')) {
+    return lang === 'te' ? 'టమోటా' : lang === 'hi' ? 'टमाटर' : 'Tomato';
+  }
+  if (c.includes('rice') || c.includes('paddy') || c.includes('వరి') || c.includes('ధాన')) {
+    return lang === 'te' ? 'వరి' : lang === 'hi' ? 'धान' : 'Rice';
+  }
+  if (c.includes('chilli') || c.includes('chili') || c.includes('మిరప') || c.includes('మిర్చి') || c.includes('మిర్చ')) {
+    return lang === 'te' ? 'మిర్చి' : lang === 'hi' ? 'मिर्च' : 'Chilli';
+  }
+  if (c.includes('cotton') || c.includes('పత్తి') || c.includes('కపాస')) {
+    return lang === 'te' ? 'పత్తి' : lang === 'hi' ? 'कपास' : 'Cotton';
+  }
+  if (c.includes('maize') || c.includes('corn') || c.includes('మొక్కజొన్న') || c.includes('మక్కా')) {
+    return lang === 'te' ? 'మొక్కజొన్న' : lang === 'hi' ? 'मक्का' : 'Maize';
+  }
+  if (c.includes('wheat') || c.includes('గోధుమ') || c.includes('గేహం')) {
+    return lang === 'te' ? 'గోధుమ' : lang === 'hi' ? 'गेहूं' : 'Wheat';
+  }
+  return crop;
+}
+

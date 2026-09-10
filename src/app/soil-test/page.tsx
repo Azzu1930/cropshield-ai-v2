@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FlaskConical, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { getActiveFarm } from '@/lib/farm-store';
+import { getLocalizedFarmName, getLocalizedLocation } from '@/lib/i18n/location-translations';
 
 export default function SoilTestPage() {
   const { t, language } = useLanguage();
@@ -35,7 +36,7 @@ export default function SoilTestPage() {
             <span>🧪</span> {t.homeCards.soilTest.title}
           </h1>
           <p className="text-sm font-semibold text-emerald-800 mt-0.5">
-            📍 {farm ? `${farm.name} (${farm.locality})` : 'Farm Location'}
+            📍 {farm ? `${getLocalizedFarmName(farm.name, language)} (${getLocalizedLocation(farm.locality, language)})` : (language === 'te' ? 'పొలం స్థానం' : language === 'hi' ? 'खेत का स्थान' : 'Farm Location')}
           </p>
         </div>
       </div>

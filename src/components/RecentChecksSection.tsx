@@ -17,6 +17,8 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { SimpleResultView } from './SimpleResultView';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
+import { getCropImage, getFallbackCropImage } from '@/lib/crop-images';
+import { getLocalizedCropName } from '@/lib/i18n/agricultural-translations';
 
 export interface HistoryItem extends CropAnalysisResult {
   id: string;
@@ -48,7 +50,11 @@ export function RecentChecksSection() {
           if (Array.isArray(parsed)) {
             parsed.forEach((item: any) => {
               if (item && (item.id || item.cropName)) {
-                itemsMap.set(item.id || `${item.cropName}-${item.createdAt}`, item);
+                const photo = getCropImage(item.cropName, item.possibleIssue, item.photoPreview);
+                itemsMap.set(item.id || `${item.cropName}-${item.createdAt}`, {
+                  ...item,
+                  photoPreview: photo,
+                });
               }
             });
           }
@@ -69,10 +75,11 @@ export function RecentChecksSection() {
 
           if (!error && data) {
             data.forEach((row: any) => {
+              const photo = getCropImage(row.crop_name, row.possible_issue, row.image_url);
               const mapped: HistoryItem = {
                 id: row.id,
                 cropName: row.crop_name,
-                photoPreview: row.image_url,
+                photoPreview: photo,
                 possibleIssue: row.possible_issue,
                 issueCategory: row.issue_category,
                 seriousness: row.seriousness,
@@ -114,7 +121,7 @@ export function RecentChecksSection() {
           <SimpleResultView
             result={selectedCheck}
             cropName={selectedCheck.cropName}
-            photoPreview={selectedCheck.photoPreview}
+            photoPreview={getCropImage(selectedCheck.cropName, selectedCheck.possibleIssue, selectedCheck.photoPreview)}
             onReset={() => setSelectedCheck(null)}
           />
         </div>
@@ -187,21 +194,18 @@ export function RecentChecksSection() {
                 <div className="space-y-2 w-full">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {item.photoPreview ? (
-                        <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
-                          <img
-                            src={item.photoPreview}
-                            alt={item.cropName}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700 shrink-0">
-                          <Sprout className="w-4 h-4" />
-                        </div>
-                      )}
+                      <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 shrink-0 bg-slate-100 shadow-xs">
+                        <img
+                          src={getCropImage(item.cropName, item.possibleIssue, item.photoPreview)}
+                          alt={item.cropName}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = getFallbackCropImage(item.cropName, item.possibleIssue);
+                          }}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                       <span className="font-semibold text-xs text-slate-900 truncate">
-                        {item.cropName}
+                        {getLocalizedCropName(item.cropName, language)}
                       </span>
                     </div>
 

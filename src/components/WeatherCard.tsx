@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getActiveFarm, type FarmRecord } from '@/lib/farm-store';
 import type { WeatherData } from '@/lib/supabase/database.types';
+import { getLocalizedFarmName, getLocalizedAddress } from '@/lib/i18n/location-translations';
 
 export function WeatherCard() {
   const { t, language } = useLanguage();
@@ -108,11 +109,11 @@ export function WeatherCard() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                {farm?.name}
+                {getLocalizedFarmName(farm?.name, language)}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300" />
               <span className="text-xs font-medium text-slate-600">
-                {farm?.locality}, {farm?.district}
+                {getLocalizedAddress(farm?.locality, farm?.district, undefined, language)}
               </span>
             </div>
           </div>

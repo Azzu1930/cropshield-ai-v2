@@ -17,6 +17,7 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth';
 import { getActiveFarm, type FarmRecord } from '@/lib/farm-store';
 import type { WeatherData } from '@/lib/supabase/database.types';
+import { getLocalizedFarmName, getLocalizedAddress } from '@/lib/i18n/location-translations';
 
 export default function WeatherPage() {
   const { t, language } = useLanguage();
@@ -68,7 +69,7 @@ export default function WeatherPage() {
               <span>☀️</span> {t.homeCards.weather.title}
             </h1>
             <p className="text-sm font-semibold text-emerald-800 mt-0.5">
-              📍 {farm ? `${farm.name} (${farm.locality}, ${farm.district})` : 'Farm Location'}
+              📍 {farm ? `${getLocalizedFarmName(farm.name, language)} (${getLocalizedAddress(farm.locality, farm.district, undefined, language)})` : (language === 'te' ? 'పొలం స్థానం' : language === 'hi' ? 'खेत का स्थान' : 'Farm Location')}
             </p>
           </div>
         </div>

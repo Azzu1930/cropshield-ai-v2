@@ -26,6 +26,8 @@ import { LiveVoiceAssistant } from './LiveVoiceAssistant';
 import type { ParsedSpeechData } from '@/lib/ai/speech-command-parser';
 import type { WeatherData } from '@/lib/supabase/database.types';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
+import { getLocalizedFarmName, getLocalizedAddress } from '@/lib/i18n/location-translations';
+import { generateThumbnail, getFallbackCropImage, getCropImage } from '@/lib/crop-images';
 
 // Clean, professional SVG vector crop badges (zero cartoon emojis)
 function CropVectorIcon({ id }: { id: string }) {
@@ -274,7 +276,13 @@ export function CropWizard() {
           return;
         }
 
-        setPhotoPreview(comp.dataUrl);
+        generateThumbnail(comp.dataUrl, 200, 0.72)
+          .then((thumb) => {
+            setPhotoPreview(thumb);
+          })
+          .catch(() => {
+            setPhotoPreview(comp.dataUrl);
+          });
         setCompressedDataUrl(comp.dataUrl);
         setImageValidationInfo({
           isValid: true,
@@ -401,30 +409,32 @@ export function CropWizard() {
           const historyRaw = localStorage.getItem(historyKey);
           const historyList = historyRaw ? JSON.parse(historyRaw) : [];
           const entryId = data.id || `check-${Date.now()}`;
+          const previewToSave = photoPreview || getFallbackCropImage(activeCropName, data.possibleIssue);
           const newRecord = {
             ...data,
             id: entryId,
-          cropName: activeCropName,
-          photoPreview,
-          createdAt: new Date().toISOString(),
-          userId: user?.id,
-        };
-        historyList.unshift(newRecord);
-        localStorage.setItem(historyKey, JSON.stringify(historyList.slice(0, 50)));
+            cropName: activeCropName,
+            photoPreview: previewToSave,
+            createdAt: new Date().toISOString(),
+            userId: user?.id,
+          };
+          historyList.unshift(newRecord);
+          localStorage.setItem(historyKey, JSON.stringify(historyList.slice(0, 50)));
 
-        // Background sync to Supabase if authenticated with real session and farmId is available
-        if (isSupabaseConfigured && supabase && user) {
-          const isValidUuid = (str?: string) =>
-            Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
+          // Background sync to Supabase if authenticated with real session and farmId is available
+          if (isSupabaseConfigured && supabase && user) {
+            const isValidUuid = (str?: string) =>
+              Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
 
-          if (isValidUuid(user.id) && isValidUuid(farm?.id)) {
-            supabase
-              .from('assessments')
-              .insert({
-                user_id: user.id,
-                farm_id: farm!.id,
-                crop_name: activeCropName,
-                symptoms: selectedSymptoms,
+            if (isValidUuid(user.id) && isValidUuid(farm?.id)) {
+              supabase
+                .from('assessments')
+                .insert({
+                  user_id: user.id,
+                  farm_id: farm!.id,
+                  crop_name: activeCropName,
+                  image_url: previewToSave,
+                  symptoms: selectedSymptoms,
                 water_level: waterLevel,
                 has_soil_report: hasSoilReport,
                 weather_snapshot: weather || {},
@@ -1081,7 +1091,7 @@ export function CropWizard() {
                   📍 {t.wizard.yourFarm}
                 </p>
                 <p className="text-lg font-black text-white mt-0.5">
-                  {farm?.name} ({farm?.locality}, {farm?.district})
+                  {getLocalizedFarmName(farm?.name, language)} ({getLocalizedAddress(farm?.locality, farm?.district, undefined, language)})
                 </p>
               </div>
             </div>

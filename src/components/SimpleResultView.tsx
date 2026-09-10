@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { VoiceNarrator } from './VoiceNarrator';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
 import { getLocalizedResultContent, translateExplanation } from '@/lib/i18n/agricultural-translations';
+import { getCropImage, getFallbackCropImage } from '@/lib/crop-images';
 
 interface SimpleResultViewProps {
   result: CropAnalysisResult;
@@ -274,15 +275,16 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
       <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-emerald-200 shadow-xl space-y-6">
         {/* Header with Photo Preview & Title */}
         <div className="flex items-start gap-4">
-          {photoPreview && (
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-emerald-300 shrink-0 bg-gray-100 shadow-sm">
-              <img
-                src={photoPreview}
-                alt="Crop symptom"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-emerald-300 shrink-0 bg-gray-100 shadow-sm">
+            <img
+              src={getCropImage(cropName, activePossibleIssue, photoPreview)}
+              alt="Crop symptom"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = getFallbackCropImage(cropName, activePossibleIssue);
+              }}
+              className="w-full h-full object-cover"
+            />
+          </div>
           <div className="flex-1">
             <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wider mb-1.5">
               {getLocalizedCropName(cropName)}

@@ -26,6 +26,7 @@ import {
   type FarmRecord,
 } from '@/lib/farm-store';
 import { LocationPicker, type SelectedLocation } from '@/components/LocationPicker';
+import { getLocalizedFarmName, getLocalizedAddress } from '@/lib/i18n/location-translations';
 
 export default function FarmsPage() {
   const { t, language } = useLanguage();
@@ -424,7 +425,7 @@ export default function FarmsPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-extrabold text-lg text-gray-900 leading-snug">
-                          {f.name}
+                          {getLocalizedFarmName(f.name, language)}
                         </h3>
                         {isActive && (
                           <span className="px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-950 font-black text-[11px]">
@@ -433,7 +434,7 @@ export default function FarmsPage() {
                         )}
                       </div>
                       <p className="text-sm font-semibold text-emerald-800 mt-0.5">
-                        📍 {f.locality}, {f.district} ({f.state})
+                        📍 {getLocalizedAddress(f.locality, f.district, f.state, language)}
                       </p>
                       <p className="text-xs text-gray-500 mt-1 font-mono">
                         GPS: {f.latitude.toFixed(4)}, {f.longitude.toFixed(4)} • Crop: {f.cropName || 'General'}

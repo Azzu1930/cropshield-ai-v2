@@ -22,6 +22,8 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { SimpleResultView } from '@/components/SimpleResultView';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
+import { getCropImage, getFallbackCropImage } from '@/lib/crop-images';
+import { getLocalizedCropName } from '@/lib/i18n/agricultural-translations';
 
 interface HistoryItem extends CropAnalysisResult {
   id: string;
@@ -54,7 +56,11 @@ export default function HistoryPage() {
           if (Array.isArray(parsed)) {
             parsed.forEach((item: any) => {
               if (item && (item.id || item.cropName)) {
-                itemsMap.set(item.id || `${item.cropName}-${item.createdAt}`, item);
+                const photo = getCropImage(item.cropName, item.possibleIssue, item.photoPreview);
+                itemsMap.set(item.id || `${item.cropName}-${item.createdAt}`, {
+                  ...item,
+                  photoPreview: photo,
+                });
               }
             });
           }
@@ -74,10 +80,11 @@ export default function HistoryPage() {
 
           if (!error && data) {
             data.forEach((row: any) => {
+              const photo = getCropImage(row.crop_name, row.possible_issue, row.image_url);
               const mapped: HistoryItem = {
                 id: row.id,
                 cropName: row.crop_name,
-                photoPreview: row.image_url,
+                photoPreview: photo,
                 possibleIssue: row.possible_issue,
                 issueCategory: row.issue_category,
                 seriousness: row.seriousness,
@@ -205,7 +212,7 @@ export default function HistoryPage() {
         <SimpleResultView
           result={selectedReport}
           cropName={selectedReport.cropName}
-          photoPreview={selectedReport.photoPreview}
+          photoPreview={getCropImage(selectedReport.cropName, selectedReport.possibleIssue, selectedReport.photoPreview)}
           onReset={() => setSelectedReport(null)}
         />
       </div>
@@ -325,24 +332,21 @@ export default function HistoryPage() {
                   className="w-full text-left p-5 rounded-3xl bg-white border-2 border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/40 shadow-sm hover:shadow-md transition-all flex items-center justify-between gap-4 group cursor-pointer"
                 >
                   <div className="flex items-start gap-4 flex-1 min-w-0">
-                    {item.photoPreview ? (
-                      <div className="w-14 h-14 rounded-2xl overflow-hidden border border-emerald-300 shrink-0 bg-gray-100">
-                        <img
-                          src={item.photoPreview}
-                          alt={item.cropName}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
-                        <Sprout className="w-7 h-7 text-emerald-700" />
-                      </div>
-                    )}
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden border border-emerald-300 shrink-0 bg-gray-100 shadow-sm">
+                      <img
+                        src={getCropImage(item.cropName, item.possibleIssue, item.photoPreview)}
+                        alt={item.cropName}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = getFallbackCropImage(item.cropName, item.possibleIssue);
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-black text-base text-gray-900 truncate">
-                          {item.cropName}
+                          {getLocalizedCropName(item.cropName, language)}
                         </span>
                         <span className="text-xs text-gray-400">•</span>
                         <span className="text-xs font-semibold text-gray-500">

@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
             farm_id: farmId,
             ...(userId && !userId.startsWith('farmer-') ? { user_id: userId } : {}),
             crop_name: cropName,
+            image_url: imageDataUrl || null,
             symptoms: symptoms as any,
             water_level: waterLevel,
             has_soil_report: hasSoilReport,

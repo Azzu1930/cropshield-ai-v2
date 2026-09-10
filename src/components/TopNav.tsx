@@ -7,9 +7,10 @@ import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { LanguageSelector } from './LanguageSelector';
 import { getStoredFarms, getActiveFarmId, setActiveFarmId, type FarmRecord } from '@/lib/farm-store';
+import { getLocalizedLocation, getLocalizedFarmName, getLocalizedAddress } from '@/lib/i18n/location-translations';
 
 export function TopNav() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, logout } = useAuth();
   const [farms, setFarms] = useState<FarmRecord[]>([]);
   const [activeFarmId, setActiveFarmState] = useState<string>('');
@@ -88,7 +89,13 @@ export function TopNav() {
                   className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/70 border border-slate-200 text-xs font-semibold text-slate-800 transition-colors"
                 >
                   <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                  <span className="max-w-[110px] truncate">{activeFarm?.locality || activeFarm?.name || t.nav.selectFarm}</span>
+                  <span className="max-w-[110px] truncate">
+                    {activeFarm?.locality
+                      ? getLocalizedLocation(activeFarm.locality, language)
+                      : activeFarm?.name
+                      ? getLocalizedFarmName(activeFarm.name, language)
+                      : t.nav.selectFarm}
+                  </span>
                   <ChevronDown className="w-3 h-3 text-slate-500" />
                 </button>
 
@@ -106,8 +113,8 @@ export function TopNav() {
                           activeFarmId === f.id ? 'bg-emerald-50/70 font-semibold text-emerald-900' : 'text-slate-700'
                         }`}
                       >
-                        <p className="font-medium text-slate-900 truncate">{f.name}</p>
-                        <p className="text-[11px] text-slate-500">{f.locality}, {f.district}</p>
+                        <p className="font-medium text-slate-900 truncate">{getLocalizedFarmName(f.name, language)}</p>
+                        <p className="text-[11px] text-slate-500">{getLocalizedAddress(f.locality, f.district, undefined, language)}</p>
                       </button>
                     ))}
                     <div className="p-1.5 border-t border-slate-100">
