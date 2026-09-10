@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { UserCheck, ArrowLeft, CheckCircle2, PhoneCall, ShieldCheck } from 'lucide-react';
+import { UserCheck, ArrowLeft, CheckCircle2, PhoneCall, ShieldCheck, LogIn, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getActiveFarm } from '@/lib/farm-store';
@@ -60,6 +60,57 @@ export default function ExpertReviewPage() {
       setLoading(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto py-12 px-4 text-center space-y-6 animate-in fade-in">
+        <div className="w-16 h-16 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center mx-auto border-2 border-purple-100">
+          <UserCheck className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-slate-900">
+            {language === 'te'
+              ? 'లాగిన్ అవ్వండి'
+              : language === 'hi'
+              ? 'लॉगिन आवश्यक है'
+              : 'Sign In Required'}
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+            {language === 'te'
+              ? 'వ్యవసాయ శాస్త్రవేత్తలతో సంప్రదించడానికి దయచేసి ఖాతాలోకి లాగిన్ అవ్వండి లేదా కొత్త ఖాతా తెరవండి.'
+              : language === 'hi'
+              ? 'कृषि वैज्ञानिकों से संपर्क करने के लिए कृपया लॉगिन करें या नया खाता बनाएं।'
+              : 'Please sign in or register a free farmer account to consult with agricultural scientists.'}
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <Link
+            href="/login"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>{t.nav.login}</span>
+          </Link>
+          <Link
+            href="/register"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl border-2 border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>{t.nav.register}</span>
+          </Link>
+        </div>
+        <div className="pt-2">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>{t.wizard.buttons.back} to Home</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in pb-16">
