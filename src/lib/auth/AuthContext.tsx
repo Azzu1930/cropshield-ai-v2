@@ -310,10 +310,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (signUpResult?.error) {
-          console.warn('Supabase sign up notice:', signUpResult.error);
+          console.error('[CropShield] Supabase sign up error:', signUpResult.error);
+          setIsLoading(false);
+          return { success: false, error: signUpResult.error.message };
         }
-      } catch (err) {
-        console.warn('Supabase signup error:', err);
+      } catch (err: any) {
+        console.error('[CropShield] Supabase signup error:', err);
+        setIsLoading(false);
+        return { success: false, error: err.message || 'Database connection error' };
       }
     }
 
