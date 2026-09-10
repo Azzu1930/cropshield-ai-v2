@@ -1,0 +1,206 @@
+import type { TranslationDictionary } from './types';
+
+export const en: TranslationDictionary = {
+  appTitle: 'CropShield AI',
+  appSubtitle: 'Farmer Decision Support',
+  tagline: 'Smarter Insights. Healthier Crops.',
+
+  nav: {
+    home: 'Home',
+    checkCrop: 'Check My Crop',
+    farms: 'My Farms',
+    weather: 'Weather',
+    reports: 'My Reports',
+    expert: 'Ask Expert',
+    history: 'History',
+    soil: 'Soil Test',
+    water: 'Water',
+    switchLanguage: 'Language',
+    selectFarm: 'Select Farm',
+    listen: 'Listen',
+    stopListening: 'Stop Voice',
+  },
+
+  homeCards: {
+    checkCrop: {
+      title: 'Check My Crop',
+      desc: 'Check your crop health in 2 minutes',
+    },
+    uploadPhoto: {
+      title: 'Upload Crop Photo',
+      desc: 'Take or choose a leaf photo to diagnose',
+    },
+    myFarms: {
+      title: 'My Farms',
+      desc: 'Manage your farms and land locations',
+    },
+    water: {
+      title: 'Water',
+      desc: 'Log irrigation and get watering advice',
+    },
+    soilTest: {
+      title: 'Soil Test',
+      desc: 'Upload soil test or view soil nutrients',
+    },
+    weather: {
+      title: 'Weather',
+      desc: 'Auto-detected temperature, rain and humidity',
+    },
+    myReports: {
+      title: 'My Reports',
+      desc: 'View your previous crop health checks',
+    },
+    askExpert: {
+      title: 'Ask Expert',
+      desc: 'Get advice from an agricultural scientist',
+    },
+  },
+
+  weatherCard: {
+    title: 'Farm Weather',
+    farmPrefix: 'Farm',
+    humidity: 'Humidity',
+    rainfall: 'Rainfall',
+    wind: 'Wind',
+    rainProb: 'Rain chance',
+    weatherImpactTitle: 'Weather Impact',
+    weatherImpactDesc: 'Weather conditions may affect your crop diseases and watering needs.',
+    seeDetails: 'See details',
+    lastUpdated: 'Last updated',
+    tempUnavailable: 'Weather information is temporarily unavailable.',
+    cachedNotice: 'Showing latest available weather data.',
+    rainLikelyToday: 'Rain likely today',
+  },
+
+  wizard: {
+    step1Title: 'What crop do you want to check?',
+    step2Title: 'Take or upload a photo',
+    step3Title: "What's wrong with the crop?",
+    step4Title: 'How much water did you give?',
+    step5Title: 'Do you have a soil test?',
+    step6Title: 'Automatic Weather Check',
+    step7Title: 'Checking your crop...',
+
+    crops: {
+      rice: '🌾 Rice / Paddy',
+      maize: '🌽 Maize / Corn',
+      tomato: '🍅 Tomato',
+      chilli: '🌶️ Chilli',
+      groundnut: '🥜 Groundnut',
+      cotton: '⚪ Cotton',
+      other: '🌿 Other Crop',
+    },
+
+    takePhoto: '📷 Take Photo',
+    choosePhoto: '📁 Choose Photo',
+    photoTip: 'Please click a clear photo of the damaged leaf or affected plant.',
+    rephoto: 'Change Photo',
+    validatingPhoto: 'Checking photo quality...',
+    photoInvalidHuman: 'Human or non-crop image detected. Please take a clear photo of your crop leaf or plant.',
+    photoInvalidGeneral: 'Please take a clear, well-lit photo of your crop plant.',
+
+    symptoms: {
+      yellowLeaves: '🟡 Leaves are yellow',
+      brownSpots: '🟤 Brown spots',
+      insects: '🐛 Insects or pests',
+      drying: '🍂 Leaves are drying',
+      wilting: '💧 Plant is wilting',
+      poorGrowth: '🌱 Growth is poor',
+      dontKnow: "❓ I don't know",
+    },
+
+    water: {
+      lessThanUsual: '💧 Less than usual',
+      normal: '💧 Normal watering',
+      moreThanUsual: '💧 More than usual',
+      enterAmountOptional: 'Optional: Enter exact amount if known',
+      amountPlaceholder: 'e.g. 2 hours drip or 5 cm flood',
+    },
+
+    soil: {
+      question: 'Do you have a recent soil testing report?',
+      yesUpload: 'YES — Upload Soil Report',
+      noContinue: 'NO — Continue without Soil Report',
+      phLabel: 'Soil pH (if known)',
+    },
+
+    weatherChecking: 'Checking live weather for your farm...',
+    weatherAutoDetected: 'Weather automatically detected from your farm location:',
+    yourFarm: 'Your Farm Location',
+    noTypingNeeded: 'No typing needed! Weather is pulled automatically from satellite stations.',
+
+    progress: {
+      checkingPhoto: 'Checking photo and leaf symptoms...',
+      checkingSymptoms: 'Analyzing visible crop signs...',
+      checkingWeather: 'Correlating humidity, rain & temperature...',
+      checkingWater: 'Evaluating soil moisture and watering...',
+      checkingSoil: 'Reviewing soil parameters...',
+      comparingHistory: 'Comparing with your previous reports...',
+      preparingRecs: 'Preparing simple action steps...',
+    },
+
+    buttons: {
+      next: 'Next Step →',
+      back: '← Back',
+      startCheck: 'Start Check 🚀',
+      viewResult: 'View My Crop Result 📋',
+    },
+  },
+
+  result: {
+    cropHealthTitle: '🌱 Your Crop Health Result',
+    possibleProblemTitle: '⚠️ Possible Problem',
+    howSeriousTitle: 'How serious is this?',
+    seriousness: {
+      low: '🟢 Low Risk',
+      medium: '🟡 Medium Risk',
+      high: '🔴 High Risk',
+      healthy: '🟢 Healthy Crop',
+    },
+    whatShouldIDoTitle: 'What should I do?',
+    whyTitle: 'Why did we give this advice?',
+    resultConfidenceTitle: 'How sure is the result?',
+    confidence: {
+      high: '🟢 High Confidence',
+      medium: '🟡 Medium Confidence',
+      low: '🔴 Low Confidence (Verify carefully)',
+    },
+    whyToggle: 'Click to see detailed explanation',
+    expertPrompt: 'Want an agricultural expert to check this?',
+    askExpertBtn: '👨🌾 Ask an Agricultural Expert',
+    expertSavedNotice: 'Your request has been saved! An expert will review your crop photo and details.',
+    checkAgainNotice: '📅 Please check your crop and take another photo in 3 days.',
+    listenResult: '🔊 Listen to Result & Advice',
+    preliminaryNotice: 'Preliminary assessment based on structured observations.',
+    comparedWithLast: 'Compared with your last check:',
+    comparisonStatus: {
+      better: '🟢 Better than last time',
+      same: '🟡 About the same',
+      needsAttention: '🔴 Needs attention / worsening',
+    },
+  },
+
+  location: {
+    useMyLocation: '📍 Use My Location',
+    detectingLocation: 'Detecting your farm coordinates...',
+    locationDetected: 'Location detected successfully!',
+    searchLocation: 'Search your village / town / district',
+    searchPlaceholder: 'Type e.g. Bhimavaram, Amalapuram, Vijayawada...',
+    addFarmTitle: 'Add New Farm',
+    farmNamePlaceholder: 'Farm Name (e.g. My Paddy Field)',
+    state: 'State',
+    district: 'District',
+    locality: 'Village / Town / Locality',
+    saveFarm: 'Save Farm',
+    selectExisting: 'Select Farm',
+  },
+
+  common: {
+    disclaimer: 'Notice: CropShield AI provides evidence-based decision guidance and does not replace certified agronomic laboratory inspection. For severe loss, contact your local Krishi Vigyan Kendra (KVK).',
+    errorGeneral: 'Something went wrong. Please try again.',
+    offlineMode: 'Running in offline decision mode.',
+    saving: 'Saving...',
+    loading: 'Loading...',
+    close: 'Close',
+  },
+};
