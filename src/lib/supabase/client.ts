@@ -9,7 +9,8 @@ function cleanSupabaseUrl(url: string): string {
   return cleaned;
 }
 
-const supabaseUrl = cleanSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
+const DEFAULT_SUPABASE_URL = 'https://cfllwgzsmxpioeiytvbj.supabase.co';
+const supabaseUrl = cleanSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL);
 const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
 export const isSupabaseConfigured = Boolean(
