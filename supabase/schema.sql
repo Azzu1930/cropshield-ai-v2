@@ -1,6 +1,7 @@
 -- ============================================================================
 -- CROPSHIELD AI - SUPABASE POSTGRESQL SCHEMA WITH ROW LEVEL SECURITY (RLS)
 -- Multi-tenant, Farmer-First, Zero-Cost Agricultural Decision Platform
+-- Idempotent script: Safe to run multiple times without errors
 -- ============================================================================
 
 -- Enable pgcrypto for UUID generation
@@ -28,19 +29,23 @@ CREATE INDEX IF NOT EXISTS idx_farms_coordinates ON public.farms(latitude, longi
 
 ALTER TABLE public.farms ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can only view their own farms" ON public.farms;
 CREATE POLICY "Farmers can only view their own farms"
     ON public.farms FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert their own farms" ON public.farms;
 CREATE POLICY "Farmers can insert their own farms"
     ON public.farms FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can update their own farms" ON public.farms;
 CREATE POLICY "Farmers can update their own farms"
     ON public.farms FOR UPDATE
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can delete their own farms" ON public.farms;
 CREATE POLICY "Farmers can delete their own farms"
     ON public.farms FOR DELETE
     USING (auth.uid() = user_id);
@@ -65,18 +70,22 @@ CREATE INDEX IF NOT EXISTS idx_fields_user_id ON public.fields(user_id);
 
 ALTER TABLE public.fields ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can only view their own fields" ON public.fields;
 CREATE POLICY "Farmers can only view their own fields"
     ON public.fields FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert their own fields" ON public.fields;
 CREATE POLICY "Farmers can insert their own fields"
     ON public.fields FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can update their own fields" ON public.fields;
 CREATE POLICY "Farmers can update their own fields"
     ON public.fields FOR UPDATE
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can delete their own fields" ON public.fields;
 CREATE POLICY "Farmers can delete their own fields"
     ON public.fields FOR DELETE
     USING (auth.uid() = user_id);
@@ -107,14 +116,17 @@ CREATE INDEX IF NOT EXISTS idx_weather_fetched_at ON public.weather_records(fetc
 
 ALTER TABLE public.weather_records ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own weather records" ON public.weather_records;
 CREATE POLICY "Farmers can view their own weather records"
     ON public.weather_records FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert weather records" ON public.weather_records;
 CREATE POLICY "Farmers can insert weather records"
     ON public.weather_records FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can update their own weather records" ON public.weather_records;
 CREATE POLICY "Farmers can update their own weather records"
     ON public.weather_records FOR UPDATE
     USING (auth.uid() = user_id);
@@ -140,10 +152,12 @@ CREATE INDEX IF NOT EXISTS idx_water_user_id ON public.water_records(user_id);
 
 ALTER TABLE public.water_records ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own water records" ON public.water_records;
 CREATE POLICY "Farmers can view their own water records"
     ON public.water_records FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert their own water records" ON public.water_records;
 CREATE POLICY "Farmers can insert their own water records"
     ON public.water_records FOR INSERT
     WITH CHECK (auth.uid() = user_id);
@@ -172,10 +186,12 @@ CREATE INDEX IF NOT EXISTS idx_soil_user_id ON public.soil_reports(user_id);
 
 ALTER TABLE public.soil_reports ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own soil reports" ON public.soil_reports;
 CREATE POLICY "Farmers can view their own soil reports"
     ON public.soil_reports FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert their own soil reports" ON public.soil_reports;
 CREATE POLICY "Farmers can insert their own soil reports"
     ON public.soil_reports FOR INSERT
     WITH CHECK (auth.uid() = user_id);
@@ -203,10 +219,12 @@ CREATE INDEX IF NOT EXISTS idx_images_user_id ON public.images(user_id);
 
 ALTER TABLE public.images ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own uploaded images" ON public.images;
 CREATE POLICY "Farmers can view their own uploaded images"
     ON public.images FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert images" ON public.images;
 CREATE POLICY "Farmers can insert images"
     ON public.images FOR INSERT
     WITH CHECK (auth.uid() = user_id);
@@ -249,14 +267,17 @@ CREATE INDEX IF NOT EXISTS idx_assessments_created_at ON public.assessments(crea
 
 ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own assessments" ON public.assessments;
 CREATE POLICY "Farmers can view their own assessments"
     ON public.assessments FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert their own assessments" ON public.assessments;
 CREATE POLICY "Farmers can insert their own assessments"
     ON public.assessments FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can delete their own assessments" ON public.assessments;
 CREATE POLICY "Farmers can delete their own assessments"
     ON public.assessments FOR DELETE
     USING (auth.uid() = user_id);
@@ -281,10 +302,12 @@ CREATE INDEX IF NOT EXISTS idx_recs_user_id ON public.recommendations(user_id);
 
 ALTER TABLE public.recommendations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own recommendations" ON public.recommendations;
 CREATE POLICY "Farmers can view their own recommendations"
     ON public.recommendations FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert their own recommendations" ON public.recommendations;
 CREATE POLICY "Farmers can insert their own recommendations"
     ON public.recommendations FOR INSERT
     WITH CHECK (auth.uid() = user_id);
@@ -313,10 +336,12 @@ CREATE INDEX IF NOT EXISTS idx_expert_status ON public.expert_reviews(status);
 
 ALTER TABLE public.expert_reviews ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own expert review requests" ON public.expert_reviews;
 CREATE POLICY "Farmers can view their own expert review requests"
     ON public.expert_reviews FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can request an expert review" ON public.expert_reviews;
 CREATE POLICY "Farmers can request an expert review"
     ON public.expert_reviews FOR INSERT
     WITH CHECK (auth.uid() = user_id);
@@ -340,10 +365,12 @@ CREATE INDEX IF NOT EXISTS idx_reports_user_id ON public.reports(user_id);
 
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own reports" ON public.reports;
 CREATE POLICY "Farmers can view their own reports"
     ON public.reports FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can insert their reports" ON public.reports;
 CREATE POLICY "Farmers can insert their reports"
     ON public.reports FOR INSERT
     WITH CHECK (auth.uid() = user_id);
@@ -368,10 +395,12 @@ CREATE INDEX IF NOT EXISTS idx_notifications_read ON public.notifications(user_i
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Farmers can view their own notifications" ON public.notifications;
 CREATE POLICY "Farmers can view their own notifications"
     ON public.notifications FOR SELECT
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Farmers can update their notifications" ON public.notifications;
 CREATE POLICY "Farmers can update their notifications"
     ON public.notifications FOR UPDATE
     USING (auth.uid() = user_id);
@@ -380,7 +409,6 @@ CREATE POLICY "Farmers can update their notifications"
 -- ============================================================================
 -- STORAGE BUCKETS CONFIGURATION (Supabase Storage)
 -- ============================================================================
--- Execute via Supabase Dashboard or SQL editor:
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('crop-images', 'crop-images', true)
 ON CONFLICT (id) DO NOTHING;
@@ -390,18 +418,22 @@ VALUES ('soil-reports', 'soil-reports', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage RLS:
+DROP POLICY IF EXISTS "Public read for crop images" ON storage.objects;
 CREATE POLICY "Public read for crop images"
     ON storage.objects FOR SELECT
     USING (bucket_id = 'crop-images');
 
+DROP POLICY IF EXISTS "Authenticated users can upload crop images" ON storage.objects;
 CREATE POLICY "Authenticated users can upload crop images"
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'crop-images' AND auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Public read for soil reports" ON storage.objects;
 CREATE POLICY "Public read for soil reports"
     ON storage.objects FOR SELECT
     USING (bucket_id = 'soil-reports');
 
+DROP POLICY IF EXISTS "Authenticated users can upload soil reports" ON storage.objects;
 CREATE POLICY "Authenticated users can upload soil reports"
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'soil-reports' AND auth.role() = 'authenticated');
