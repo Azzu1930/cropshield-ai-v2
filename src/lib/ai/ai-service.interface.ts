@@ -26,6 +26,12 @@ export interface CropAnalysisParams {
     locality: string;
   };
   imageDataUrl?: string;
+  imageValidation?: {
+    isValid: boolean;
+    reason?: string;
+    plantRatio?: number;
+    skinRatio?: number;
+  };
   previousAssessment?: {
     possibleIssue: string;
     seriousness: 'LOW' | 'MEDIUM' | 'HIGH';

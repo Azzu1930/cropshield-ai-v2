@@ -126,6 +126,7 @@ export function CropWizard() {
   const [compressedDataUrl, setCompressedDataUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [imageValidationInfo, setImageValidationInfo] = useState<{ isValid: boolean; plantRatio?: number; skinRatio?: number } | null>(null);
 
   // Step 3: Symptoms (multi-select)
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
@@ -216,34 +217,37 @@ export function CropWizard() {
       // 1. Compress client-side via canvas (<1280px, stripped EXIF, JPEG 82%)
       const comp = await compressImage(file, 1280, 0.82);
 
-      // 2. Validate using canvas chroma inspection (detect human portraits / non-crop images)
+      // 2. Validate using canvas chroma inspection covering 100% of the image
       const tempImg = new Image();
       tempImg.onload = () => {
-        const c = document.createElement('canvas');
-        c.width = tempImg.width;
-        c.height = tempImg.height;
-        const ctx = c.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(tempImg, 0, 0);
-          const validation = validateImageClient(c);
+        const validation = validateImageClient(tempImg);
 
-          if (!validation.isValid) {
-            setPhotoPreview(null);
-            setCompressedDataUrl(null);
-            setPhotoError(
-              validation.reason === 'human_or_selfie'
-                ? t.wizard.photoInvalidHuman
-                : t.wizard.photoCropNotDetected || t.wizard.photoInvalidGeneral
-            );
-            setIsCompressing(false);
-            if (cameraInputRef.current) cameraInputRef.current.value = '';
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            return;
-          }
+        if (!validation.isValid) {
+          setPhotoPreview(null);
+          setCompressedDataUrl(null);
+          setImageValidationInfo(null);
+          setPhotoError(
+            validation.reason === 'human_or_selfie'
+              ? (language === 'te'
+                  ? 'పంట గుర్తించబడలేదు. మనిషి లేదా చిత్రం ఫోటో గుర్తించబడింది. దయచేసి పంట ఆకు లేదా పైరు ఫోటో తీయండి.'
+                  : language === 'hi'
+                  ? 'फसल नहीं पहचानी गई। इंसान या चित्र पाया गया। कृपया केवल खेत की फसल या पत्ते की फोटो लें।'
+                  : 'Crop not detected. Person, face, or drawing detected. Please upload a clear photo of your crop leaf or plant.')
+              : (t.wizard.photoCropNotDetected || t.wizard.photoInvalidGeneral)
+          );
+          setIsCompressing(false);
+          if (cameraInputRef.current) cameraInputRef.current.value = '';
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
         }
 
         setPhotoPreview(comp.dataUrl);
         setCompressedDataUrl(comp.dataUrl);
+        setImageValidationInfo({
+          isValid: true,
+          plantRatio: validation.plantRatio,
+          skinRatio: validation.skinRatio,
+        });
         setPhotoError(null);
         setIsCompressing(false);
       };
@@ -317,6 +321,7 @@ export function CropWizard() {
             locality: farm.locality,
           } : undefined,
           imageDataUrl: compressedDataUrl,
+          imageValidation: imageValidationInfo,
           previousAssessment,
           language,
           farmId: farm?.id,
@@ -325,20 +330,43 @@ export function CropWizard() {
 
       if (!res.ok) {
         const errData = await res.json();
+        if (errData.error === 'crop_not_detected' || errData.error === 'invalid_image') {
+          // Set invalid result directly
+          setAnalysisResult({
+            isCropDetected: false,
+            possibleIssue: 'CROP_NOT_DETECTED',
+            issueCategory: 'unknown',
+            seriousness: 'LOW',
+            confidenceLevel: 'LOW',
+            confidenceScore: 0.0,
+            explanation: errData.message || 'Crop not detected in this image. Please upload a clear photo of an agricultural crop leaf or plant.',
+            whyReasons: ['The uploaded photo does not contain an agricultural crop, leaf, or farm plant.'],
+            actions: [],
+            isPreliminary: false,
+            aiProvider: 'CropShield Gatekeeper',
+            language: language as any,
+          });
+          setTimeout(() => {
+            clearInterval(progressInterval);
+            setCurrentStep(8);
+          }, 1500);
+          return;
+        }
         throw new Error(errData.message || 'Analysis failed');
       }
 
       const data = await res.json();
       setAnalysisResult(data);
 
-      // Save to user-scoped history for offline persistence & comparison
-      try {
-        const historyRaw = localStorage.getItem(historyKey);
-        const historyList = historyRaw ? JSON.parse(historyRaw) : [];
-        const entryId = data.id || `check-${Date.now()}`;
-        const newRecord = {
-          ...data,
-          id: entryId,
+      // Only save to user-scoped history if crop was actually detected
+      if (data.isCropDetected !== false && data.possibleIssue !== 'CROP_NOT_DETECTED') {
+        try {
+          const historyRaw = localStorage.getItem(historyKey);
+          const historyList = historyRaw ? JSON.parse(historyRaw) : [];
+          const entryId = data.id || `check-${Date.now()}`;
+          const newRecord = {
+            ...data,
+            id: entryId,
           cropName: activeCropName,
           photoPreview,
           createdAt: new Date().toISOString(),
@@ -381,8 +409,9 @@ export function CropWizard() {
               });
           }
         }
-      } catch (saveErr) {
-        console.warn('Could not save history locally:', saveErr);
+        } catch (saveErr) {
+          console.warn('Could not save history locally:', saveErr);
+        }
       }
 
       // Wait for progress animation to finish

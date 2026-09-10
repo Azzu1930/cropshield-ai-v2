@@ -26,17 +26,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Crop name is required.' }, { status: 400 });
     }
 
-    // Pre-AI Image check: If client-side or base64 flag indicates human/selfie
-    if (body.isInvalidHumanPhoto) {
+    // Pre-AI Image check: If client-side or base64 flag indicates human/selfie or invalid photo
+    if (
+      body.isInvalidHumanPhoto ||
+      (body.imageValidation && body.imageValidation.isValid === false)
+    ) {
       return NextResponse.json(
         {
-          error: 'invalid_image',
+          error: 'crop_not_detected',
           message:
             language === 'te'
-              ? 'మనిషి లేదా పంట కాని ఫోటో గుర్తించబడింది. దయచేసి పంట ఆకు లేదా చెట్టు ఫోటో తీయండి.'
+              ? 'పంట గుర్తించబడలేదు. మనిషి, చిత్రం లేదా ఇతర వస్తువుల ఫోటోలు అంగీకరించబడవు. దయచేసి పంట ఆకు లేదా చెట్టు ఫోటో తీయండి.'
               : language === 'hi'
-              ? 'इंसान या गैर-फसल फोटो पाई गई। कृपया फसल के पत्ते या पौधे की साफ फोटो लें।'
-              : 'Human or non-crop image detected. Please upload a clear photo of your crop leaf or plant.',
+              ? 'फसल नहीं पहचानी गई। इंसान, चित्र या अन्य वस्तु की फोटो अमान्य है। कृपया फसल के पत्ते या पौधे की साफ फोटो लें।'
+              : 'Crop not detected. Person, drawing, or non-crop image detected. Please upload a clear photo of your crop leaf or plant.',
         },
         { status: 400 }
       );
@@ -54,6 +57,7 @@ export async function POST(request: NextRequest) {
       weatherData,
       farmLocation,
       imageDataUrl,
+      imageValidation: body.imageValidation,
       previousAssessment,
       language: (language as SupportedLanguage) || 'en',
     };

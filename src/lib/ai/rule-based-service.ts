@@ -19,7 +19,39 @@ export class RuleBasedAIService implements AIService {
       previousAssessment,
       language = 'en',
       imageDataUrl,
+      imageValidation,
     } = params;
+
+    const isTe = language === 'te';
+    const isHi = language === 'hi';
+
+    // Gatekeeper: If image was validated as invalid/non-crop, refuse to generate diagnosis
+    if (imageValidation && imageValidation.isValid === false) {
+      return {
+        isCropDetected: false,
+        possibleIssue: 'CROP_NOT_DETECTED',
+        issueCategory: 'unknown',
+        seriousness: 'LOW',
+        confidenceLevel: 'LOW',
+        confidenceScore: 0.0,
+        explanation: isTe
+          ? 'పంట గుర్తించబడలేదు. అప్‌లోడ్ చేసిన చిత్రం వ్యవసాయ పంట, ఆకు లేదా మొక్క కాదు. దయచేసి పంట ఆకు ఫోటో తీయండి.'
+          : isHi
+          ? 'फसल नहीं पहचानी गई। अपलोड की गई फोटो में कोई फसल या पत्ता नहीं मिला। कृपया असली फसल की फोटो अपलोड करें।'
+          : 'Crop not detected. The uploaded photo does not appear to be an agricultural crop or plant. Please upload a clear photo of your crop leaf or plant.',
+        whyReasons: [
+          isTe
+            ? 'ఈ చిత్రంలో వ్యవసాయ పంట ఆకులు లేదా మొక్క భాగాల ఆనవాళ్లు లేవు.'
+            : isHi
+            ? 'इस छवि में फसल के पत्ते या वनस्पति का कोई निशान नहीं है।'
+            : 'No plant foliage or agricultural crop characteristics detected in the image.',
+        ],
+        actions: [],
+        isPreliminary: false,
+        aiProvider: 'CropShield Gatekeeper',
+        language,
+      };
+    }
 
     const cropKey = (cropName || '').toLowerCase().trim();
     const hasBrownSpots = symptoms.includes('brownSpots') || symptoms.some(s => s.toLowerCase().includes('spot') || s.toLowerCase().includes('మచ్చ') || s.toLowerCase().includes('धब्बे'));

@@ -34,6 +34,96 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
   const [expertSubmitted, setExpertSubmitted] = useState(false);
   const [submittingExpert, setSubmittingExpert] = useState(false);
 
+  // Check if image was rejected or crop was not detected
+  const isCropDetected =
+    result.isCropDetected !== false &&
+    result.possibleIssue !== 'CROP_NOT_DETECTED' &&
+    result.issueCategory !== 'unknown';
+
+  if (!isCropDetected) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-300 pb-16">
+        <div className="flex items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+          <button
+            type="button"
+            onClick={onReset}
+            className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-emerald-800 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>{t.wizard.buttons.back}</span>
+          </button>
+          <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
+            {language === 'te' ? 'చెల్లని చిత్రం' : language === 'hi' ? 'अमान्य चित्र' : 'Invalid Image'}
+          </span>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border-2 border-red-200 shadow-lg text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto border-2 border-red-100">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-900">
+              {language === 'te'
+                ? 'పంట గుర్తించబడలేదు'
+                : language === 'hi'
+                ? 'फसल नहीं पहचानी गई'
+                : 'Crop Not Detected'}
+            </h2>
+            <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+              {result.explanation ||
+                (language === 'te'
+                  ? 'మీరు అప్‌లోడ్ చేసిన చిత్రంలో వ్యవసాయ పంట లేదా ఆకు గుర్తించబడలేదు. సిస్టమ్ కేవలం పంటలు, ఆకులు మరియు మొక్కల ఫోటోలను మాత్రమే విశ్లేషిస్తుంది. మనుషులు, డ్రాయింగ్‌లు లేదా ఇతర చిత్రాలకు ఎటువంటి సిఫార్సులు ఇవ్వబడవు.'
+                  : language === 'hi'
+                  ? 'अपलोड की गई फोटो में कृषि फसल या पत्ता नहीं पहचाना गया। सिस्टम केवल फसल और पौधों की तस्वीरों का विश्लेषण करता है। अन्य किसी भी फोटो के लिए सिफारिशें नहीं दी जाएंगी।'
+                  : 'The uploaded image does not contain an agricultural crop, leaf, or farm plant. CropShield AI only provides recommendations for genuine crop photos. Random images, faces, and drawings are rejected.')}
+            </p>
+          </div>
+
+          {photoPreview && (
+            <div className="relative max-w-xs mx-auto rounded-2xl overflow-hidden border-2 border-slate-200 bg-slate-100">
+              <img
+                src={photoPreview}
+                alt="Uploaded photo"
+                className="w-full h-48 object-cover opacity-60 grayscale"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <span className="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-black uppercase tracking-wider shadow">
+                  {language === 'te' ? 'తిరస్కరించబడింది' : language === 'hi' ? 'अस्वीकृत' : 'Rejected'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 text-left space-y-2">
+            <span className="font-bold text-slate-800 block">
+              {language === 'te' ? 'సరైన ఫోటో ఎలా తీయాలి?' : language === 'hi' ? 'सही फोटो कैसे लें?' : 'How to take a valid photo?'}
+            </span>
+            <ul className="list-disc list-inside space-y-1">
+              <li>{language === 'te' ? 'పంట యొక్క ఆకు లేదా కొమ్మను దగ్గరగా ఉంచి స్పష్టమైన ఫోటో తీయండి.' : language === 'hi' ? 'फसल की पत्ती या पौधे की स्पष्ट फोटो लें।' : 'Take a clear, close-up photo of the crop leaf or plant.'}</li>
+              <li>{language === 'te' ? 'మనుషుల ముఖాలు, కాగితాలు లేదా వస్తువుల ఫోటోలు తీయవద్దు.' : language === 'hi' ? 'इंसान, चेहरे, कागज या अन्य वस्तुओं की फोटो न लें।' : 'Do not take photos of people, drawings, documents, or random objects.'}</li>
+              <li>{language === 'te' ? 'మంచి వెలుతురులో మాత్రమే ఫోటో తీయండి.' : language === 'hi' ? 'अच्छी रोशनी में फोटो खींचें।' : 'Ensure good daytime lighting in the field.'}</li>
+            </ul>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={onReset}
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm shadow-md transition-colors"
+            >
+              {language === 'te'
+                ? 'మళ్లీ సరైన పంట ఫోటో తీయండి'
+                : language === 'hi'
+                ? 'फिर से असली फसल की फोटो लें'
+                : 'Upload a Real Crop Photo'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Determine Seriousness Badge
   const getSeriousnessBadge = () => {
     switch (result.seriousness) {
