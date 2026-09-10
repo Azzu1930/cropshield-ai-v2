@@ -113,6 +113,7 @@ export interface TranslationDictionary {
     validatingPhoto: string;
     photoInvalidHuman: string;
     photoInvalidGeneral: string;
+    photoCropNotDetected: string;
 
     // Step 3 Symptoms
     symptoms: {

@@ -3,21 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 17, 24, 39;
-  --background-start-rgb: 247, 252, 248;
-  --background-end-rgb: 255, 255, 255;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb))
-    );
+  color: var(--foreground);
+  background-color: var(--background);
   min-height: 100vh;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Touch-friendly buttons */
@@ -26,7 +23,7 @@ button, a {
 }
 
 /* Accessible focus ring */
-button:focus-visible, a:focus-visible, input:focus-visible {
-  outline: 2px solid #059669;
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid #047857;
   outline-offset: 2px;
 }

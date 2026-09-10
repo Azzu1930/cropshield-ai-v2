@@ -150,16 +150,16 @@ export function ExpertReviewTracker() {
   return (
     <section aria-label="Expert Review Status" className="space-y-3.5">
       {/* Tracker Card */}
-      <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-purple-50/80 via-white to-indigo-50/50 border-2 border-purple-200 shadow-sm relative overflow-hidden">
+      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm relative overflow-hidden">
         {/* Header with Live Expert Status */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-100 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 text-white flex items-center justify-center text-2xl shadow-md shadow-purple-600/20 shrink-0">
-              👨🌾
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+              <UserCheck className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-black text-gray-900 leading-tight">
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
                   {language === 'te'
                     ? 'వ్యవసాయ శాస్త్రవేత్త సమీక్ష ట్రాకింగ్'
                     : language === 'hi'
@@ -167,7 +167,7 @@ export function ExpertReviewTracker() {
                     : 'Agricultural Scientist Review Tracking'}
                 </h2>
               </div>
-              <p className="text-xs font-semibold text-purple-900 mt-0.5">
+              <p className="text-xs font-medium text-slate-500 mt-0.5">
                 {language === 'te'
                   ? 'KVK వ్యవసాయ అధికారుల నుండి ధృవీకరించబడిన ప్రిస్క్రిప్షన్'
                   : language === 'hi'
@@ -178,7 +178,7 @@ export function ExpertReviewTracker() {
           </div>
 
           {/* Live Online Badge */}
-          <div className="flex items-center gap-2 self-start sm:self-center px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-900 font-extrabold text-xs shadow-xs">
+          <div className="flex items-center gap-2 self-start sm:self-center px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold text-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
             <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0 -ml-4" />
             <span>
@@ -194,22 +194,22 @@ export function ExpertReviewTracker() {
         {/* Reviews List or Prompt */}
         <div className="pt-4">
           {isLoading ? (
-            <div className="h-20 rounded-2xl bg-white border border-purple-100 p-4 animate-pulse" />
+            <div className="h-20 rounded-xl bg-white border border-slate-100 p-4 animate-pulse" />
           ) : reviews.length === 0 ? (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white/80 border border-purple-100">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl shrink-0">
-                  💬
+                <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 text-emerald-700 flex items-center justify-center shrink-0">
+                  <UserCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-gray-800">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-900">
                     {language === 'te'
                       ? 'పంట తెగులు గురించి సందేహాలు ఉన్నాయా?'
                       : language === 'hi'
                       ? 'फसल की बीमारी पर कोई संदेह है?'
                       : 'Have doubts about your crop health?'}
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     {language === 'te'
                       ? 'మీ పంట ఫోటోను వ్యవసాయ శాస్త్రవేత్త పరిశీలనకు పంపండి. 15-30 నిమిషాల్లో సలహా అందుతుంది.'
                       : language === 'hi'
@@ -221,9 +221,9 @@ export function ExpertReviewTracker() {
 
               <Link
                 href="/expert-review"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs shadow-md transition-all shrink-0 hover:scale-105 active:scale-100"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs shadow-sm transition-colors shrink-0"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>
                   {language === 'te'
                     ? 'నిపుణుడిని సంప్రదించండి'
@@ -242,7 +242,7 @@ export function ExpertReviewTracker() {
 
                 <Link
                   href="/expert-review"
-                  className="text-xs font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 hover:underline"
+                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 hover:underline"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>{language === 'te' ? '+ కొత్త ప్రశ్న అడగండి' : language === 'hi' ? '+ नया प्रश्न पूछें' : '+ New Question'}</span>
@@ -264,7 +264,7 @@ export function ExpertReviewTracker() {
                     key={rev.id}
                     type="button"
                     onClick={() => setSelectedReview(rev)}
-                    className="w-full text-left p-4 rounded-2xl bg-white border-2 border-purple-200 hover:border-purple-500 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                    className="w-full text-left p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 shadow-sm transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
                   >
                     <div className="flex items-start gap-3">
                       <div

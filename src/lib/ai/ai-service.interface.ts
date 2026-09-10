@@ -35,6 +35,7 @@ export interface CropAnalysisParams {
 }
 
 export interface CropAnalysisResult {
+  isCropDetected?: boolean;
   possibleIssue: string;
   issueCategory: 'fungal' | 'bacterial' | 'viral' | 'pest' | 'nutrient' | 'water_stress' | 'healthy' | 'general' | 'unknown';
   seriousness: 'LOW' | 'MEDIUM' | 'HIGH';

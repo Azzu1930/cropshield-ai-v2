@@ -41,8 +41,26 @@ export class GeminiAIService implements AIService {
 Analyze the multi-evidence agricultural data and the provided crop leaf image.
 
 TARGET LANGUAGE: ${langName}
-CRITICAL ACCURACY & DIVERSITY RULES:
-1. Examine the uploaded photo carefully (look for circular lesions, target-like concentric rings, pustules, chlorosis, vein clearing, curling, insect bites, or healthy turgor).
+CRITICAL ACCURACY & CROP VALIDATION RULES:
+0. STRICT CROP IMAGE GATEKEEPER:
+   First, inspect the uploaded photo. Check whether it is an actual agricultural crop, farm plant, leaf, flower, fruit, or farm vegetation.
+   If the image is a person, human selfie, car, vehicle, indoor room, furniture, pet, animal, computer or mobile screen, document, paper, or random non-agricultural object:
+   YOU MUST RETURN:
+   {
+     "isCropDetected": false,
+     "possibleIssue": "CROP_NOT_DETECTED",
+     "issueCategory": "unknown",
+     "seriousness": "LOW",
+     "confidenceLevel": "LOW",
+     "confidenceScore": 0.0,
+     "explanation": "No agricultural crop or plant was detected in this photo. Please upload a clear photo of your crop leaf or plant.",
+     "whyReasons": ["The uploaded image does not contain an agricultural crop, leaf, or farm plant."],
+     "actions": []
+   }
+   Do NOT provide any crop diagnosis, diseases, or remedies for non-crop images.
+
+1. Only if the photo is an actual crop, plant, or leaf, proceed with detailed diagnosis:
+   Examine the uploaded photo carefully (look for circular lesions, target-like concentric rings, pustules, chlorosis, vein clearing, curling, insect bites, or healthy turgor).
 2. The diagnosis ("possibleIssue") and 4 action steps MUST be strictly specific to the crop: "${cropName}".
    - For Tomato: Distinguish between Early Blight (Alternaria), Late Blight, Tomato Leaf Curl Virus, Fruit Borer, or Blossom End Rot.
    - For Rice: Distinguish between Blast, Brown Spot, BLB, Stem Borer, or BPH.
@@ -63,6 +81,7 @@ ${previousAssessment ? `- Previous assessment: ${previousAssessment.possibleIssu
 
 Respond ONLY with a valid JSON object matching this schema:
 {
+  "isCropDetected": true,
   "possibleIssue": "Crop-specific diagnostic headline in ${langName}",
   "issueCategory": "fungal" | "bacterial" | "viral" | "pest" | "nutrient" | "water_stress" | "healthy" | "unknown",
   "seriousness": "LOW" | "MEDIUM" | "HIGH",
@@ -131,6 +150,7 @@ Respond ONLY with a valid JSON object matching this schema:
       const parsed = JSON.parse(rawText);
 
       return {
+        isCropDetected: parsed.isCropDetected !== false && parsed.possibleIssue !== 'CROP_NOT_DETECTED',
         possibleIssue: parsed.possibleIssue || `${cropName} Check`,
         issueCategory: parsed.issueCategory || 'general',
         seriousness: parsed.seriousness || 'LOW',

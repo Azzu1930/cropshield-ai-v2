@@ -61,6 +61,22 @@ export async function POST(request: NextRequest) {
     // Perform analysis through AIService (Gemini or RuleBased fallback)
     const result = await aiService.analyzeCrop(analysisParams);
 
+    // Strict Gatekeeper: If AI determined this is not a crop/plant, reject with 400 Bad Request
+    if (result.isCropDetected === false || result.possibleIssue === 'CROP_NOT_DETECTED') {
+      return NextResponse.json(
+        {
+          error: 'crop_not_detected',
+          message:
+            language === 'te'
+              ? 'పంట గుర్తించబడలేదు. దయచేసి మీ పంట ఆకు లేదా పైరు ఫోటో తీయండి. ఇతర ఫోటోలు అంగీకరించబడవు.'
+              : language === 'hi'
+              ? 'फसल नहीं पहचानी गई। कृपया अपनी फसल के पत्ते या पौधे की साफ फोटो लें।'
+              : 'Crop not detected. The uploaded photo does not appear to be an agricultural crop or plant. Please upload a clear photo of your crop leaf or plant.',
+        },
+        { status: 400 }
+      );
+    }
+
     // Save to Supabase if configured and authenticated
     const supabase = getServerSupabase();
     let savedId: string | null = null;

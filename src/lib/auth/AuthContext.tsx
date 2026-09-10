@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabase/client';
+import { hashPassword, verifyPassword } from './crypto';
 
 export interface FarmerUser {
   id: string;
@@ -153,21 +154,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const localUsersRaw = localStorage.getItem('cropshield_registered_users');
           if (localUsersRaw) {
             const localUsers: any[] = JSON.parse(localUsersRaw);
-            const found = localUsers.find(
-              (u) => (u.email === cleanId || u.phone === cleanId) && u.password === password
-            );
-            if (found) {
-              const localFarmer: FarmerUser = {
-                id: found.id,
-                name: found.name,
-                email: found.email,
-                phone: found.phone,
-                preferred_language: found.language,
-              };
-              setUser(localFarmer);
-              localStorage.setItem('cropshield_active_user', JSON.stringify(localFarmer));
-              setIsLoading(false);
-              return { success: true };
+            for (const u of localUsers) {
+              if (u.email === cleanId || u.phone === cleanId) {
+                let isMatch = false;
+                if (u.passwordHash && u.salt) {
+                  isMatch = await verifyPassword(password, u.passwordHash, u.salt);
+                } else if (u.password) {
+                  // Legacy account migration: verify plain and upgrade to hash + salt
+                  isMatch = u.password === password;
+                  if (isMatch) {
+                    const { hash, salt } = await hashPassword(password);
+                    u.passwordHash = hash;
+                    u.salt = salt;
+                    delete u.password;
+                    localStorage.setItem('cropshield_registered_users', JSON.stringify(localUsers));
+                  }
+                }
+                if (isMatch) {
+                  const localFarmer: FarmerUser = {
+                    id: u.id,
+                    name: u.name,
+                    email: u.email,
+                    phone: u.phone,
+                    preferred_language: u.language,
+                  };
+                  setUser(localFarmer);
+                  localStorage.setItem('cropshield_active_user', JSON.stringify(localFarmer));
+                  setIsLoading(false);
+                  return { success: true };
+                }
+              }
             }
           }
 
@@ -179,39 +195,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 2. Offline / Local fallback login
+    // 2. Offline / Local fallback login with cryptographic password verification
     try {
       const localUsersRaw = localStorage.getItem('cropshield_registered_users');
-      const localUsers: any[] = localUsersRaw ? JSON.parse(localUsersRaw) : [];
-      const found = localUsers.find(
-        (u) => (u.email === cleanId || u.phone === cleanId)
-      );
+      if (localUsersRaw) {
+        const localUsers: any[] = JSON.parse(localUsersRaw);
+        for (const u of localUsers) {
+          if (u.email === cleanId || u.phone === cleanId) {
+            let isMatch = false;
+            if (u.passwordHash && u.salt) {
+              isMatch = await verifyPassword(password, u.passwordHash, u.salt);
+            } else if (u.password) {
+              // Legacy account migration: verify plain and upgrade to hash + salt
+              isMatch = u.password === password;
+              if (isMatch) {
+                const { hash, salt } = await hashPassword(password);
+                u.passwordHash = hash;
+                u.salt = salt;
+                delete u.password;
+                localStorage.setItem('cropshield_registered_users', JSON.stringify(localUsers));
+              }
+            }
 
-      if (found) {
-        const localFarmer: FarmerUser = {
-          id: found.id,
-          name: found.name,
-          email: found.email,
-          phone: found.phone,
-          preferred_language: found.language,
-        };
-        setUser(localFarmer);
-        localStorage.setItem('cropshield_active_user', JSON.stringify(localFarmer));
-        setIsLoading(false);
-        return { success: true };
+            if (isMatch) {
+              const localFarmer: FarmerUser = {
+                id: u.id,
+                name: u.name,
+                email: u.email,
+                phone: u.phone,
+                preferred_language: u.language,
+              };
+              setUser(localFarmer);
+              localStorage.setItem('cropshield_active_user', JSON.stringify(localFarmer));
+              setIsLoading(false);
+              return { success: true };
+            } else {
+              setIsLoading(false);
+              return { success: false, error: 'Incorrect password. Please try again.' };
+            }
+          }
+        }
       }
 
-      // Default fallback acceptance for demo convenience
-      const newFarmer: FarmerUser = {
-        id: `farmer-${Date.now()}`,
-        name: cleanId.includes('@') ? cleanId.split('@')[0] : `Farmer (${cleanId})`,
-        email: cleanId.includes('@') ? cleanId : null,
-        phone: !cleanId.includes('@') ? cleanId : null,
-      };
-      setUser(newFarmer);
-      localStorage.setItem('cropshield_active_user', JSON.stringify(newFarmer));
+      // If identifier not found in registered accounts:
       setIsLoading(false);
-      return { success: true };
+      return { success: false, error: 'No account found with this phone/email. Please register first.' };
     } catch {
       setIsLoading(false);
       return { success: false, error: 'Login failed. Please check credentials.' };
@@ -228,6 +256,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }) => {
     setIsLoading(true);
     const { name, email, phone, password = 'password123', language = 'en' } = params;
+
+    // Cryptographically hash password with salt before saving
+    const { hash: passwordHash, salt } = await hashPassword(password);
 
     // 1. Try Supabase Auth if configured
     if (isSupabaseConfigured && supabase) {
@@ -274,8 +305,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(newUser);
           localStorage.setItem('cropshield_active_user', JSON.stringify(newUser));
 
-          // Also save to local registered users list
-          saveToLocalUsers({ id: sbUser.id, name, email, phone, password, language });
+          // Also save to local registered users list with encrypted password hash
+          saveToLocalUsers({ id: sbUser.id, name, email, phone, passwordHash, salt, language });
           setIsLoading(false);
           return { success: true };
         }
@@ -288,7 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 2. Offline / Local fallback registration
+    // 2. Offline / Local fallback registration with encrypted password hash
     const newId = `farmer-${Date.now()}`;
     const newUser: FarmerUser = {
       id: newId,
@@ -298,7 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       preferred_language: language,
     };
 
-    saveToLocalUsers({ id: newId, name, email, phone, password, language });
+    saveToLocalUsers({ id: newId, name, email, phone, passwordHash, salt, language });
     setUser(newUser);
     localStorage.setItem('cropshield_active_user', JSON.stringify(newUser));
     setIsLoading(false);

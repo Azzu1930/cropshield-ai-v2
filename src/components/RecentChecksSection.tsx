@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Calendar,
   Sparkles,
+  ClipboardList,
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -125,15 +126,15 @@ export function RecentChecksSection() {
     <section aria-label="Recent Crop Health History" className="space-y-3.5">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="text-xl">📋</span>
-          <h2 className="text-base sm:text-lg font-black text-gray-900">
+          <ClipboardList className="w-4 h-4 text-emerald-700" />
+          <h2 className="text-sm sm:text-base font-bold text-slate-900">
             {t.recentChecks.title}
           </h2>
         </div>
 
         <Link
           href="/history"
-          className="text-xs sm:text-sm font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 hover:underline transition-all"
+          className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 hover:underline transition-all"
         >
           <span>{t.recentChecks.viewAll}</span>
         </Link>
@@ -144,21 +145,21 @@ export function RecentChecksSection() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-28 rounded-3xl bg-white border border-gray-200 p-4 animate-pulse"
+              className="h-28 rounded-2xl bg-white border border-slate-200 p-4 animate-pulse"
             />
           ))}
         </div>
       ) : recentChecks.length === 0 ? (
-        <div className="p-6 sm:p-8 rounded-3xl bg-white border-2 border-dashed border-emerald-200 text-center space-y-3 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto text-2xl">
-            🌱
+        <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-3 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 text-emerald-700 flex items-center justify-center mx-auto">
+            <Sprout className="w-5 h-5" />
           </div>
-          <p className="text-sm font-bold text-gray-700 max-w-md mx-auto">
+          <p className="text-xs sm:text-sm font-medium text-slate-600 max-w-md mx-auto">
             {t.recentChecks.noChecksYet}
           </p>
           <Link
             href="/check-crop"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm shadow-md transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs shadow-sm transition-colors"
           >
             <Sprout className="w-4 h-4" />
             <span>{t.homeCards.checkCrop.title}</span>
@@ -181,13 +182,13 @@ export function RecentChecksSection() {
                 key={item.id}
                 type="button"
                 onClick={() => setSelectedCheck(item)}
-                className="w-full text-left p-4 rounded-3xl bg-white border-2 border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                className="w-full text-left p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 shadow-sm transition-all flex flex-col justify-between group"
               >
                 <div className="space-y-2 w-full">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {item.photoPreview ? (
-                        <div className="w-8 h-8 rounded-xl overflow-hidden border border-emerald-300 shrink-0 bg-gray-100">
+                        <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
                           <img
                             src={item.photoPreview}
                             alt={item.cropName}
@@ -195,14 +196,16 @@ export function RecentChecksSection() {
                           />
                         </div>
                       ) : (
-                        <span className="text-lg">🌾</span>
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700 shrink-0">
+                          <Sprout className="w-4 h-4" />
+                        </div>
                       )}
-                      <span className="font-black text-sm text-gray-900 truncate">
+                      <span className="font-semibold text-xs text-slate-900 truncate">
                         {item.cropName}
                       </span>
                     </div>
 
-                    <span className="text-[11px] font-semibold text-gray-500">
+                    <span className="text-[11px] font-medium text-slate-400">
                       {dateStr}
                     </span>
                   </div>

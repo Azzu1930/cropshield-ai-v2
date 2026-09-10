@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Sprout, ShieldCheck } from 'lucide-react';
+import { Sprout, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { WeatherCard } from '@/components/WeatherCard';
 import { HomeCards } from '@/components/HomeCards';
@@ -14,30 +14,30 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in">
-      {/* Welcome Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-4">
+      {/* Institutional Portal Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl sm:text-3xl">🌾</span>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {language === 'te'
-                ? 'నమస్కారం! మీరు ఏమి చేయాలనుకుంటున్నారు?'
+                ? 'పంట రక్షణ & వ్యవసాయ సలహా కేంద్రం'
                 : language === 'hi'
-                ? 'नमस्ते किसान भाई! आप क्या करना चाहते हैं?'
-                : 'Hello! What do you want to do?'}
+                ? 'फसल सुरक्षा एवं कृषि सलाहकार पोर्टल'
+                : 'National Crop Health & Advisory Portal'}
             </h1>
           </div>
-          <p className="text-sm font-semibold text-emerald-800 mt-1">
+          <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1">
             {t.tagline}
           </p>
         </div>
 
         <Link
           href="/check-crop"
-          className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-700 text-white font-extrabold text-base shadow-md hover:shadow-lg transition-all hover:scale-105 active:scale-100"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm shadow-sm transition-colors shrink-0"
         >
-          <Sprout className="w-5 h-5 text-white" />
+          <Sprout className="w-4 h-4 text-white" />
           <span>{t.homeCards.checkCrop.title}</span>
+          <ArrowRight className="w-4 h-4 text-emerald-200" />
         </Link>
       </div>
 
@@ -46,14 +46,14 @@ export default function HomePage() {
         <WeatherCard />
       </section>
 
-      {/* 2. 8 Large Touch Cards */}
-      <section aria-label="Main Agricultural Actions" className="space-y-3">
-        <h2 className="text-xs font-black text-gray-400 uppercase tracking-wider px-1">
+      {/* 2. Primary Agritech Modules */}
+      <section aria-label="Agricultural Operations" className="space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 px-1">
           {language === 'te'
             ? 'ప్రధాన సేవలు'
             : language === 'hi'
             ? 'मुख्य सेवाएं'
-            : 'Quick Actions'}
+            : 'Core Operations'}
         </h2>
         <HomeCards />
       </section>
@@ -64,10 +64,10 @@ export default function HomePage() {
       {/* 4. Recent Crop Checks & Previously Checked History */}
       <RecentChecksSection />
 
-      {/* 5. Farmer Safety Notice / Disclaimer */}
-      <footer className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
-        <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
-        <p className="leading-relaxed font-medium">
+      {/* 5. Advisory Disclaimer */}
+      <footer className="p-4 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 flex items-start gap-3 shadow-sm">
+        <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+        <p className="leading-relaxed font-normal">
           {t.common.disclaimer}
         </p>
       </footer>

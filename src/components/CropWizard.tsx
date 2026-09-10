@@ -148,18 +148,23 @@ export function CropWizard() {
           const validation = validateImageClient(c);
 
           if (!validation.isValid) {
+            setPhotoPreview(null);
+            setCompressedDataUrl(null);
             setPhotoError(
               validation.reason === 'human_or_selfie'
                 ? t.wizard.photoInvalidHuman
-                : t.wizard.photoInvalidGeneral
+                : t.wizard.photoCropNotDetected || t.wizard.photoInvalidGeneral
             );
             setIsCompressing(false);
+            if (cameraInputRef.current) cameraInputRef.current.value = '';
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
           }
         }
 
         setPhotoPreview(comp.dataUrl);
         setCompressedDataUrl(comp.dataUrl);
+        setPhotoError(null);
         setIsCompressing(false);
       };
       tempImg.src = comp.dataUrl;
@@ -473,40 +478,44 @@ export function CropWizard() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Big Touch Camera Button */}
+              {/* Camera Button */}
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
                 disabled={isCompressing}
-                className="p-8 rounded-3xl border-2 border-dashed border-emerald-500 bg-emerald-50/60 hover:bg-emerald-100 text-emerald-950 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-100"
+                className="p-6 sm:p-8 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-900 flex flex-col items-center justify-center gap-3 transition-colors shadow-sm"
               >
-                <div className="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
-                  <Camera className="w-9 h-9" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                  <Camera className="w-6 h-6" />
                 </div>
-                <span className="font-extrabold text-lg sm:text-xl">
-                  {t.wizard.takePhoto}
-                </span>
-                <span className="text-xs text-emerald-700 font-semibold">
-                  Opens your phone camera
-                </span>
+                <div className="text-center">
+                  <span className="block font-bold text-sm sm:text-base text-slate-900">
+                    {t.wizard.takePhoto}
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Opens device camera
+                  </span>
+                </div>
               </button>
 
-              {/* Big Touch Choose Photo Button */}
+              {/* Upload Photo Button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isCompressing}
-                className="p-8 rounded-3xl border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-900 flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-100"
+                className="p-6 sm:p-8 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-900 flex flex-col items-center justify-center gap-3 transition-colors shadow-sm"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gray-700 text-white flex items-center justify-center shadow-md">
-                  <Upload className="w-9 h-9" />
+                <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                  <Upload className="w-6 h-6" />
                 </div>
-                <span className="font-extrabold text-lg sm:text-xl">
-                  {t.wizard.choosePhoto}
-                </span>
-                <span className="text-xs text-gray-500 font-semibold">
-                  From phone gallery
-                </span>
+                <div className="text-center">
+                  <span className="block font-bold text-sm sm:text-base text-slate-900">
+                    {t.wizard.choosePhoto}
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    From photo gallery
+                  </span>
+                </div>
               </button>
             </div>
           )}
@@ -529,17 +538,18 @@ export function CropWizard() {
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className="px-6 py-3.5 rounded-2xl border-2 border-gray-300 text-gray-700 font-bold text-sm"
+              className="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
             >
               {t.wizard.buttons.back}
             </button>
             <button
               type="button"
+              disabled={!photoPreview || !compressedDataUrl || !!photoError || isCompressing}
               onClick={() => setCurrentStep(3)}
-              className="px-8 py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-base shadow-md flex items-center gap-2"
+              className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm flex items-center gap-2 transition-colors"
             >
               <span>{t.wizard.buttons.next}</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -897,8 +907,24 @@ export function CropWizard() {
           </div>
 
           {analysisError && (
-            <div className="p-4 bg-red-50 border-2 border-red-300 rounded-2xl text-red-800 text-sm font-bold">
-              {analysisError}
+            <div className="p-5 bg-red-50 border border-red-200 rounded-2xl text-left space-y-3">
+              <div className="flex items-center gap-2 font-bold text-red-900">
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+                <span>Crop Not Detected</span>
+              </div>
+              <p className="text-xs text-red-700">{analysisError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setAnalysisError(null);
+                  setPhotoPreview(null);
+                  setCompressedDataUrl(null);
+                  setCurrentStep(2);
+                }}
+                className="px-5 py-2.5 bg-red-700 hover:bg-red-800 text-white font-semibold text-xs rounded-xl transition-colors"
+              >
+                Upload Valid Crop Photo
+              </button>
             </div>
           )}
         </div>
