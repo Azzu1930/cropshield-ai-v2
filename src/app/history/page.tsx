@@ -43,7 +43,6 @@ export default function HistoryPage() {
       const itemsMap = new Map<string, HistoryItem>();
       const scope = user?.id || 'anonymous';
       const storageKey = `cropshield_history_${scope}`;
-      const isDemo = Boolean(user?.isDemo || user?.id === 'demo-farmer-id');
 
       // 1. Read from user-scoped localStorage
       try {
@@ -63,7 +62,7 @@ export default function HistoryPage() {
       }
 
       // 2. Fetch from Supabase if authenticated
-      if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+      if (isSupabaseConfigured && supabase && user) {
         try {
           const { data, error } = await supabase
             .from('assessments')
@@ -99,79 +98,6 @@ export default function HistoryPage() {
         }
       }
 
-      // Only supply default samples if running as the Demo Farmer
-      if (itemsMap.size === 0 && isDemo) {
-        const sample: HistoryItem[] = [
-          {
-            id: 'sample-1',
-            cropName: 'Rice',
-            possibleIssue:
-              language === 'te'
-                ? 'వరి ఆకుమచ్చ తెగులు ప్రారంభ లక్షణాలు'
-                : language === 'hi'
-                ? 'धान पत्ता धब्बा रोग के शुरुआती लक्षण'
-                : 'Early Fungal Brown Spot on Rice',
-            issueCategory: 'fungal',
-            seriousness: 'MEDIUM',
-            confidenceLevel: 'HIGH',
-            confidenceScore: 0.88,
-            explanation:
-              language === 'te'
-                ? 'ఆకులపై గోధుమ రంగు మచ్చలు మరియు అధిక తేమ గుర్తించబడ్డాయి.'
-                : 'Brown leaf spotting observed under humid micro-climate.',
-            whyReasons: [
-              'Brown spots on leaf margins.',
-              'Farm humidity above 80% with afternoon showers.',
-            ],
-            actions: [
-              'Inspect affected leaves today.',
-              'Avoid unnecessary irrigation.',
-              'Check again in 3 days.',
-            ],
-            previousComparison: {
-              status: 'better',
-              explanation: 'Condition improved compared to last week check.',
-            },
-            isPreliminary: true,
-            aiProvider: 'rule-based',
-            language,
-            createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-          },
-          {
-            id: 'sample-2',
-            cropName: 'Chilli',
-            possibleIssue:
-              language === 'te'
-                ? 'మిరపలో ఆకుముడత మరియు రసం పీల్చే పురుగులు'
-                : language === 'hi'
-                ? 'मिर्च में मरोड़िया रोग और रस चूसक कीट'
-                : 'Chilli Leaf Curl & Sucking Pest Infestation',
-            issueCategory: 'pest',
-            seriousness: 'HIGH',
-            confidenceLevel: 'HIGH',
-            confidenceScore: 0.92,
-            explanation:
-              language === 'te'
-                ? 'ఆకులు పైకి ముడుచుకోవడం మరియు రసం పీల్చే కీటకాలు గమనించబడ్డాయి.'
-                : 'Upward leaf curling and thrips activity observed.',
-            whyReasons: [
-              'Leaf curl symptoms present.',
-              'Warm temperatures facilitating pest reproduction.',
-            ],
-            actions: [
-              'Spray neem oil (5ml/L) immediately.',
-              'Install yellow sticky traps.',
-              'Consult local agricultural officer.',
-            ],
-            isPreliminary: true,
-            aiProvider: 'rule-based',
-            language,
-            createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-          },
-        ];
-        sample.forEach((s) => itemsMap.set(s.id, s));
-      }
-
       const list = Array.from(itemsMap.values()).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
@@ -198,7 +124,7 @@ export default function HistoryPage() {
       // Ignore
     }
 
-    if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+    if (isSupabaseConfigured && supabase && user) {
       supabase.from('assessments').delete().eq('id', id).then(({ error }) => {
         if (error) console.warn('Supabase delete assessment error:', error.message);
       });
@@ -285,7 +211,7 @@ export default function HistoryPage() {
                   : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
               }`}
             >
-              🌾 {crop}
+              {crop}
             </button>
           ))}
         </div>
@@ -346,8 +272,8 @@ export default function HistoryPage() {
                         />
                       </div>
                     ) : (
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-2xl shrink-0">
-                        🌾
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Sprout className="w-7 h-7 text-emerald-700" />
                       </div>
                     )}
 

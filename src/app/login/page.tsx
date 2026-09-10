@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Lock, ArrowRight, Eye, EyeOff, AlertCircle, Phone, LockKeyhole } from 'lucide-react';
+import { ShieldCheck, Lock, ArrowRight, Eye, EyeOff, AlertCircle, Phone, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 export default function LoginPage() {
   const { t, language } = useLanguage();
-  const { login, loginDemo } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
 
   const [identifier, setIdentifier] = useState('');
@@ -25,19 +25,14 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMsg(null);
 
-    const res = await login(identifier, password || 'password123');
+    const res = await login(identifier, password);
     setIsLoading(false);
 
     if (res.success) {
       router.push('/');
     } else {
-      setErrorMsg(res.error || 'Login failed. Please check your phone or email credentials.');
+      setErrorMsg(res.error || 'Login failed. Please check your credentials.');
     }
-  };
-
-  const handleDemoLogin = () => {
-    loginDemo();
-    router.push('/');
   };
 
   return (
@@ -124,36 +119,21 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="relative flex items-center gap-3 my-2">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Or</span>
-          <div className="h-px flex-1 bg-slate-200" />
+        {/* Don't have an account? Register CTA Button */}
+        <div className="pt-2">
+          <Link
+            href="/register"
+            className="w-full py-3 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+          >
+            <UserPlus className="w-4 h-4 text-emerald-700" />
+            <span>{t.auth.noAccountPrompt}</span>
+          </Link>
         </div>
-
-        {/* Instant Demo Login Button */}
-        <button
-          type="button"
-          onClick={handleDemoLogin}
-          className="w-full py-3 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
-        >
-          <LockKeyhole className="w-4 h-4 text-emerald-700" />
-          <span>{t.auth.demoLoginBtn}</span>
-        </button>
 
         {/* Security & Cryptography Badge */}
         <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-500 pt-2 border-t border-slate-100">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
           <span>Encrypted Authentication & Session Security (SHA-256)</span>
-        </div>
-
-        {/* Link to Register */}
-        <div className="text-center pt-1">
-          <Link
-            href="/register"
-            className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 underline underline-offset-4"
-          >
-            {t.auth.noAccountPrompt}
-          </Link>
         </div>
       </div>
     </div>

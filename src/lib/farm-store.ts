@@ -14,32 +14,7 @@ export interface FarmRecord {
   createdAt: string;
 }
 
-export const DEFAULT_FARMS: FarmRecord[] = [
-  {
-    id: 'farm-ap-1',
-    name: 'Sri Lakshmi Paddy Land',
-    state: 'Andhra Pradesh',
-    district: 'West Godavari',
-    locality: 'Bhimavaram',
-    latitude: 16.5449,
-    longitude: 81.5212,
-    cropName: 'Rice',
-    userId: 'demo-farmer-id',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'farm-tg-2',
-    name: 'Kishan Cotton & Chilli Farm',
-    state: 'Telangana',
-    district: 'Warangal',
-    locality: 'Narsampet',
-    latitude: 17.9250,
-    longitude: 79.8970,
-    cropName: 'Chilli',
-    userId: 'demo-farmer-id',
-    createdAt: new Date().toISOString(),
-  },
-];
+export const DEFAULT_FARMS: FarmRecord[] = [];
 
 /**
  * Returns current user identifier to isolate farm data per user account.
@@ -59,27 +34,11 @@ export function getCurrentUserScope(userId?: string): string {
   return 'anonymous';
 }
 
-export function isDemoScope(scope: string): boolean {
-  if (scope === 'demo-farmer-id') return true;
-  if (typeof window === 'undefined') return false;
-  try {
-    const raw = localStorage.getItem('cropshield_active_user');
-    if (raw) {
-      const user = JSON.parse(raw);
-      return Boolean(user?.isDemo || user?.id === 'demo-farmer-id');
-    }
-  } catch {
-    // Ignore
-  }
-  return false;
-}
-
 export function getStoredFarms(userId?: string): FarmRecord[] {
   if (typeof window === 'undefined') {
     return [];
   }
   const scope = getCurrentUserScope(userId);
-  const isDemo = isDemoScope(scope);
 
   try {
     const key = `cropshield_farms_${scope}`;
@@ -88,16 +47,9 @@ export function getStoredFarms(userId?: string): FarmRecord[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
     }
-
-    // Only populate default demo farms for the demo farmer account
-    if (isDemo) {
-      localStorage.setItem(key, JSON.stringify(DEFAULT_FARMS));
-      return DEFAULT_FARMS;
-    }
-
     return [];
   } catch {
-    return isDemo ? DEFAULT_FARMS : [];
+    return [];
   }
 }
 
@@ -115,7 +67,6 @@ export function saveStoredFarms(farms: FarmRecord[], userId?: string): void {
 export function getActiveFarmId(userId?: string): string | null {
   if (typeof window === 'undefined') return null;
   const scope = getCurrentUserScope(userId);
-  const isDemo = isDemoScope(scope);
 
   try {
     const key = `cropshield_active_farm_id_${scope}`;
@@ -126,9 +77,9 @@ export function getActiveFarmId(userId?: string): string | null {
     if (farms.length > 0) {
       return farms[0].id;
     }
-    return isDemo ? DEFAULT_FARMS[0].id : null;
+    return null;
   } catch {
-    return isDemo ? DEFAULT_FARMS[0].id : null;
+    return null;
   }
 }
 

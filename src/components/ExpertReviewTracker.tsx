@@ -47,7 +47,6 @@ export function ExpertReviewTracker() {
       setIsLoading(true);
       const scope = user?.id || 'anonymous';
       const storageKey = `cropshield_expert_reviews_${scope}`;
-      const isDemo = Boolean(user?.isDemo || user?.id === 'demo-farmer-id');
       const itemsMap = new Map<string, ExpertReviewItem>();
 
       // 1. Read from user-scoped localStorage
@@ -66,7 +65,7 @@ export function ExpertReviewTracker() {
       }
 
       // 2. Fetch from Supabase if authenticated real user
-      if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+      if (isSupabaseConfigured && supabase && user) {
         try {
           const { data, error } = await supabase
             .from('expert_reviews')
@@ -95,45 +94,6 @@ export function ExpertReviewTracker() {
         } catch (err) {
           console.warn('Could not fetch remote expert reviews:', err);
         }
-      }
-
-      // For Demo Farmer only, provide an illustrative completed review
-      if (itemsMap.size === 0 && isDemo) {
-        const demoReview: ExpertReviewItem = {
-          id: 'demo-exp-1',
-          cropName: 'Rice (Paddy)',
-          status: 'completed',
-          farmerNotes: 'Brown patches on leaf blade with drying margins observed.',
-          expertName: 'Dr. K. Ramanjaneyulu, Ph.D.',
-          expertTitle: 'Senior Agronomist, Regional KVK Center',
-          expertNotes:
-            language === 'te'
-              ? 'ఆకులలో బ్లాస్ట్ శిలీంధ్రం ప్రారంభ దశలో ఉన్నట్లు నిర్ధారించబడింది. యూరియా వాడకాన్ని తగ్గించండి మరియు ట్రైసైక్లాజోల్ పిచికారీ చేయండి.'
-              : language === 'hi'
-              ? 'धान में प्रारंभिक झोंका (ब्लास्ट) रोग के लक्षण हैं। यूरिया की मात्रा कम करें और अनुशंसित कवकनाशी का छिड़काव करें।'
-              : 'Confirmed early blast infection. Reduce top-dressed urea immediately and follow prescribed foliar fungicidal dosage.',
-          expertRecommendations:
-            language === 'te'
-              ? [
-                  'ట్రైసైక్లాజోల్ 75% WP @ 0.6 గ్రా/లీటర్ నీటికి కలిపి సాయంత్రం పిచికారీ చేయండి.',
-                  'పొలంలో నిల్వ ఉన్న నీటిని 2 రోజులు తీసివేసి ఆరబెట్టండి (AWD).',
-                  'పొటాష్ ఎరువును ఎకరాకు 15 కిలోలు సమానంగా వేయండి.',
-                ]
-              : language === 'hi'
-              ? [
-                  'ट्राइसाइक्लाजोल 75% WP (0.6 ग्राम प्रति लीटर) का छिड़काव करें।',
-                  'खेत से 2 दिन के लिए पानी निकाल दें ताकि जड़ों को हवा मिले।',
-                  'पोटाश की संतुलित मात्रा का प्रयोग करें।',
-                ]
-              : [
-                  'Foliar spray of Tricyclazole 75% WP @ 0.6g per litre of water.',
-                  'Drain standing field water for 48 hours to expose soil to sunlight.',
-                  'Top-dress MOP (Potash) @ 15 kg/acre to improve disease resistance.',
-                ],
-          reviewedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-          createdAt: new Date(Date.now() - 6 * 3600000).toISOString(),
-        };
-        itemsMap.set(demoReview.id, demoReview);
       }
 
       const list = Array.from(itemsMap.values()).sort(
@@ -359,8 +319,8 @@ export function ExpertReviewTracker() {
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-gray-100 pb-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-800 flex items-center justify-center text-2xl shrink-0">
-                  👨🌾
+                <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-800 flex items-center justify-center shrink-0">
+                  <UserCheck className="w-6 h-6 text-purple-700" />
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-gray-900">

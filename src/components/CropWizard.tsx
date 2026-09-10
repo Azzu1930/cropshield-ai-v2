@@ -25,6 +25,86 @@ import { SimpleResultView } from './SimpleResultView';
 import type { WeatherData } from '@/lib/supabase/database.types';
 import type { CropAnalysisResult } from '@/lib/ai/ai-service.interface';
 
+// Clean, professional SVG vector crop badges (zero cartoon emojis)
+function CropVectorIcon({ id }: { id: string }) {
+  switch (id) {
+    case 'Rice':
+      return (
+        <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200/70">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m2 22 10-10" />
+            <path d="M16 8a6 6 0 0 1-6 6" />
+            <path d="M8.5 2.5A2.12 2.12 0 0 1 11.5 5.5L6 11l-3-3 5.5-5.5Z" />
+            <path d="m14 8 2.5-2.5a2.12 2.12 0 0 1 3 3L17 11" />
+            <path d="m11 14 2.5-2.5a2.12 2.12 0 0 1 3 3L14 17" />
+          </svg>
+        </div>
+      );
+    case 'Maize':
+      return (
+        <div className="w-12 h-12 rounded-xl bg-yellow-50 text-yellow-700 flex items-center justify-center border border-yellow-200/70">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2v20" />
+            <path d="M7 7c0 4 5 7 5 7s5-3 5-7a5 5 0 0 0-10 0Z" />
+            <path d="M5 14c2.5 0 5 2 7 6" />
+            <path d="M19 14c-2.5 0-5 2-7 6" />
+          </svg>
+        </div>
+      );
+    case 'Tomato':
+      return (
+        <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200/70">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="14" r="7" />
+            <path d="M12 7V4" />
+            <path d="M9 5c1 1 3 2 3 2s2-1 3-2" />
+          </svg>
+        </div>
+      );
+    case 'Chilli':
+      return (
+        <div className="w-12 h-12 rounded-xl bg-red-50 text-red-700 flex items-center justify-center border border-red-200/70">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 4c-1 3-3 4-6 5-4 1-7 4-7 8a5 5 0 0 0 10 0c0-3 2-6 5-7" />
+            <path d="M16 2c0 2-1 3-3 3" />
+          </svg>
+        </div>
+      );
+    case 'Groundnut':
+      return (
+        <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center border border-amber-200/70">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <ellipse cx="8.5" cy="12" rx="4.5" ry="5.5" />
+            <ellipse cx="15.5" cy="12" rx="4.5" ry="5.5" />
+            <path d="M11 7a2 2 0 0 1 2 0" />
+            <path d="M11 17a2 2 0 0 0 2 0" />
+          </svg>
+        </div>
+      );
+    case 'Cotton':
+      return (
+        <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="10" r="4" />
+            <circle cx="8" cy="13" r="3.5" />
+            <circle cx="16" cy="13" r="3.5" />
+            <path d="M12 17v5" />
+            <path d="m10 19 2 3 2-3" />
+          </svg>
+        </div>
+      );
+    default:
+      return (
+        <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200/70">
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 17 4.5s-.5 1.5-1.6 7.2A7 7 0 0 1 11 20Z" />
+            <path d="m2 22 10-10" />
+          </svg>
+        </div>
+      );
+  }
+}
+
 export function CropWizard() {
   const { t, language } = useLanguage();
   const { user } = useAuth();
@@ -89,15 +169,15 @@ export function CropWizard() {
     }
   };
 
-  // Step 1: Crops List
+  // Step 1: Crops List (Clean, professional, emoji-free)
   const cropsList = [
-    { id: 'Rice', label: t.wizard.crops.rice, icon: '🌾' },
-    { id: 'Maize', label: t.wizard.crops.maize, icon: '🌽' },
-    { id: 'Tomato', label: t.wizard.crops.tomato, icon: '🍅' },
-    { id: 'Chilli', label: t.wizard.crops.chilli, icon: '🌶️' },
-    { id: 'Groundnut', label: t.wizard.crops.groundnut, icon: '🥜' },
-    { id: 'Cotton', label: t.wizard.crops.cotton, icon: '⚪' },
-    { id: 'Other', label: t.wizard.crops.other, icon: '🌿' },
+    { id: 'Rice', label: t.wizard.crops.rice },
+    { id: 'Maize', label: t.wizard.crops.maize },
+    { id: 'Tomato', label: t.wizard.crops.tomato },
+    { id: 'Chilli', label: t.wizard.crops.chilli },
+    { id: 'Groundnut', label: t.wizard.crops.groundnut },
+    { id: 'Cotton', label: t.wizard.crops.cotton },
+    { id: 'Other', label: t.wizard.crops.other },
   ];
 
   // Step 3: Symptoms List
@@ -268,7 +348,7 @@ export function CropWizard() {
         localStorage.setItem(historyKey, JSON.stringify(historyList.slice(0, 50)));
 
         // Background sync to Supabase if authenticated with real session and farmId is available
-        if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+        if (isSupabaseConfigured && supabase && user) {
           const isValidUuid = (str?: string) =>
             Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str));
 
@@ -359,34 +439,34 @@ export function CropWizard() {
       {/* STEP 1: What crop do you want to check? */}
       {/* ============================================================ */}
       {currentStep === 1 && (
-        <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-emerald-200 shadow-lg space-y-6 animate-in fade-in">
+        <div className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-6 animate-in fade-in">
           <div>
-            <h2 className="text-2xl font-black text-gray-900 leading-tight">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
               {t.wizard.step1Title}
             </h2>
-            <p className="text-sm font-medium text-gray-500 mt-1">
+            <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">
               Select the crop planted in your field:
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {cropsList.map((crop) => (
               <button
                 key={crop.id}
                 type="button"
                 onClick={() => setSelectedCrop(crop.id)}
-                className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col items-center justify-center text-center gap-2 ${
+                className={`p-4 rounded-2xl border text-left transition-all flex flex-col items-center justify-center text-center gap-2.5 ${
                   selectedCrop === crop.id
-                    ? 'border-emerald-600 bg-emerald-50 shadow-md scale-[1.02]'
-                    : 'border-gray-200 bg-white hover:border-emerald-300 hover:bg-gray-50'
+                    ? 'border-2 border-emerald-600 bg-emerald-50/60 shadow-xs'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
                 }`}
               >
-                <span className="text-4xl">{crop.icon}</span>
-                <span className="font-extrabold text-sm sm:text-base text-gray-900">
+                <CropVectorIcon id={crop.id} />
+                <span className="font-semibold text-xs sm:text-sm text-slate-900">
                   {crop.label}
                 </span>
                 {selectedCrop === crop.id && (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-1" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                 )}
               </button>
             ))}

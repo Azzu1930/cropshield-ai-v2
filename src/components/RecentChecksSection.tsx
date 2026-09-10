@@ -58,7 +58,7 @@ export function RecentChecksSection() {
       }
 
       // 2. If user is logged in & Supabase is configured, fetch latest from Supabase
-      if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+      if (isSupabaseConfigured && supabase && user) {
         try {
           const { data, error } = await supabase
             .from('assessments')

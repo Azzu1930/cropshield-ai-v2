@@ -275,8 +275,9 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
         {/* Ask an Agricultural Expert Banner */}
         <div className="pt-2 border-t border-gray-100">
           <div className="p-5 rounded-3xl bg-purple-50 border-2 border-purple-200 text-center space-y-3">
-            <p className="text-sm font-bold text-purple-900">
-              👨🌾 {t.result.expertPrompt}
+            <p className="text-sm font-bold text-purple-900 flex items-center justify-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-purple-700" />
+              <span>{t.result.expertPrompt}</span>
             </p>
             <button
               type="button"
@@ -313,8 +314,9 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
               </div>
             ) : (
               <form onSubmit={handleAskExpertSubmit} className="space-y-4">
-                <h3 className="text-lg font-black text-gray-900">
-                  👨🌾 {t.result.askExpertBtn}
+                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-purple-700" />
+                  <span>{t.result.askExpertBtn}</span>
                 </h3>
                 <p className="text-xs text-gray-500">
                   An expert from Krishi Vigyan Kendra (KVK) can review your crop symptoms, weather, and photo.

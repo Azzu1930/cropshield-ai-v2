@@ -46,7 +46,7 @@ export default function FarmsPage() {
       let active = getActiveFarmId(user?.id);
 
       // If Supabase authenticated user, sync with Supabase
-      if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+      if (isSupabaseConfigured && supabase && user) {
         try {
           const { data, error } = await supabase
             .from('farms')
@@ -107,7 +107,7 @@ export default function FarmsPage() {
       window.dispatchEvent(new CustomEvent('farmChanged', { detail: { farmId: nextId } }));
     }
 
-    if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+    if (isSupabaseConfigured && supabase && user) {
       supabase.from('farms').delete().eq('id', id).then(({ error }) => {
         if (error) console.warn('Supabase delete farm error:', error.message);
       });
@@ -138,7 +138,7 @@ export default function FarmsPage() {
     };
 
     // Save to Supabase if authenticated
-    if (isSupabaseConfigured && supabase && user && !user.isDemo) {
+    if (isSupabaseConfigured && supabase && user) {
       try {
         const { data: inserted, error: sbErr } = await supabase
           .from('farms')
@@ -186,7 +186,8 @@ export default function FarmsPage() {
           </Link>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-gray-900 flex items-center gap-2">
-              <span>🌾</span> {t.homeCards.myFarms.title}
+              <MapPin className="w-6 h-6 text-emerald-700 shrink-0" />
+              <span>{t.homeCards.myFarms.title}</span>
             </h1>
             <p className="text-sm font-semibold text-emerald-800 mt-1">
               {t.homeCards.myFarms.desc}
@@ -254,15 +255,15 @@ export default function FarmsPage() {
                 onChange={(e) => setCropName(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl border-2 border-gray-200 focus:border-emerald-600 focus:outline-none text-base font-semibold text-gray-800 bg-white"
               >
-                <option value="Rice">🌾 Rice (Paddy / వరి / धान)</option>
-                <option value="Chilli">🌶️ Chilli (మిరప / मिर्च)</option>
-                <option value="Cotton">🌱 Cotton (పత్తి / कपास)</option>
-                <option value="Tomato">🍅 Tomato (టమాట / टमाटर)</option>
-                <option value="Maize">🌽 Maize (మొక్కజొన్న / मक्का)</option>
-                <option value="Groundnut">🥜 Groundnut (వేరుశనగ / मूंगफली)</option>
-                <option value="Mango">🥭 Mango (మామిడి / आम)</option>
-                <option value="Pulses">🫘 Pulses (పప్పుదినుసులు / दालें)</option>
-                <option value="Other">🌿 Other Crop</option>
+                <option value="Rice">Rice (Paddy / వరి / धान)</option>
+                <option value="Chilli">Chilli (మిరప / मिर्च)</option>
+                <option value="Cotton">Cotton (పత్తి / कपास)</option>
+                <option value="Tomato">Tomato (టమాట / टमाटर)</option>
+                <option value="Maize">Maize (మొక్కజొన్న / मक्का)</option>
+                <option value="Groundnut">Groundnut (వేరుశనగ / मूंगफली)</option>
+                <option value="Mango">Mango (మామిడి / आम)</option>
+                <option value="Pulses">Pulses (పప్పుదినుసులు / दालें)</option>
+                <option value="Other">Other Crop</option>
               </select>
             </div>
 

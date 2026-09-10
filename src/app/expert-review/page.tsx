@@ -73,7 +73,8 @@ export default function ExpertReviewPage() {
         </Link>
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 flex items-center gap-2">
-            <span>👨🌾</span> {t.homeCards.askExpert.title}
+            <UserCheck className="w-7 h-7 text-purple-700 shrink-0" />
+            <span>{t.homeCards.askExpert.title}</span>
           </h1>
           <p className="text-sm font-semibold text-emerald-800 mt-0.5">
             Agricultural Officer / KVK Review

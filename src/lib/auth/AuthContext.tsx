@@ -10,7 +10,6 @@ export interface FarmerUser {
   email?: string | null;
   phone?: string | null;
   preferred_language?: string;
-  isDemo?: boolean;
 }
 
 interface AuthContextType {
@@ -24,7 +23,6 @@ interface AuthContextType {
     password?: string;
     language?: string;
   }) => Promise<{ success: boolean; error?: string }>;
-  loginDemo: () => void;
   logout: () => Promise<void>;
 }
 
@@ -347,20 +345,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Instant Demo Login
-  const loginDemo = () => {
-    const demoUser: FarmerUser = {
-      id: 'demo-farmer-ramesh',
-      name: 'Ramesh Patel',
-      email: 'ramesh.patel@cropshield.org',
-      phone: '9876543210',
-      preferred_language: 'te',
-      isDemo: true,
-    };
-    setUser(demoUser);
-    localStorage.setItem('cropshield_active_user', JSON.stringify(demoUser));
-  };
-
   // Log Out
   const logout = async () => {
     if (isSupabaseConfigured && supabase) {
@@ -384,7 +368,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         register,
-        loginDemo,
         logout,
       }}
     >
@@ -401,7 +384,6 @@ export function useAuth(): AuthContextType {
       isLoading: false,
       login: async () => ({ success: false }),
       register: async () => ({ success: false }),
-      loginDemo: () => {},
       logout: async () => {},
     };
   }
