@@ -31,6 +31,8 @@ export interface CropAnalysisParams {
     reason?: string;
     plantRatio?: number;
     skinRatio?: number;
+    detectedCrop?: string;
+    detectedSymptoms?: string[];
   };
   previousAssessment?: {
     possibleIssue: string;

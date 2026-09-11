@@ -8,6 +8,8 @@ export interface ImageValidationResult {
   message: string;
   plantRatio?: number;
   skinRatio?: number;
+  detectedCrop?: string;
+  detectedSymptoms?: string[];
 }
 
 /**
@@ -81,6 +83,7 @@ export function validateImageClient(
   let syntheticColorCount = 0;
   let paperDocumentCount = 0;
   let darkInkLineCount = 0;
+  let cottonBollCount = 0;
 
   // 15-bit color space quantization to detect digital drawings / anime / cell-shading vs real camera sensor noise
   const uniqueColorBins = new Set<number>();
@@ -104,10 +107,8 @@ export function validateImageClient(
       Math.abs(r - g) <= 30 &&
       b < Math.min(r, g) * 0.65;
 
-    // 3. Pods, Seeds, Tubers, and Field Soil (Earthy tan, ochre, khaki)
-    // ONLY counted if the crop is Groundnut, Peanut, or Potato
+    // 3. Pods, Seeds, Tubers, and Field Soil (Earthy tan, ochre, khaki - Groundnut)
     const isPodOrHusk =
-      isPodOrTuberCrop &&
       r >= 95 && r <= 185 &&
       g >= 75 && g <= 145 &&
       b >= 45 && b <= 110 &&
@@ -116,59 +117,65 @@ export function validateImageClient(
       (g - b >= 15 && g - b <= 50) &&
       (r - b <= 80);
 
-    // 4. Crop Lesions, Necrosis, and Fungal Rot (Dark leaf spots, anthracnose, pod rot)
-    const isNecrosisOrRot =
-      r < 85 && g < 80 && b < 72 &&
-      Math.abs(r - g) < 22 && Math.abs(g - b) < 22 &&
-      (r + g + b > 35) &&
-      (r + g + b < 190);
-
-    // 5. Vegetable & Fruit Pigments (Ripe tomatoes, red chillies)
-    // Strictly counted ONLY for verified fruit crops (Tomato, Chilli)
+    // 4. Vegetable & Fruit Pigments (Ripe tomatoes, red chillies)
     const isFruitOrFlower =
-      isFruitCrop &&
-      r >= 130 && r > g * 1.45 && r > b * 1.45 &&
-      g < 115 && b < 85 && (r - g >= 35);
+      r >= 125 && r > g * 1.30 && r > b * 1.30 &&
+      g < 135 && b < 100;
+
+    // 5. Fluffy White Cotton Bolls (Gossypium)
+    const isCottonBoll =
+      r > 195 && g > 195 && b > 190 &&
+      Math.abs(r - g) < 10 && Math.abs(g - b) < 10;
+
+    // 6. Crop Lesions, Necrosis, and Fungal Rot (Dark spots, anthracnose, pod rot)
+    const isNecrosisOrRot =
+      r < 100 && g < 90 && b < 80 &&
+      (r + g + b > 30) &&
+      (r < g * 1.35);
 
     if (isGreenFoliage) {
       greenFoliageCount++;
     } else if (isChloroticYellow) {
       chloroticYellowCount++;
-    } else if (isPodOrHusk) {
-      podHuskSoilCount++;
-    } else if (isNecrosisOrRot) {
-      cropNecrosisRotCount++;
     } else if (isFruitOrFlower) {
       fruitRedPurpleCount++;
+    } else if (isPodOrHusk) {
+      podHuskSoilCount++;
+    } else if (isCottonBoll) {
+      cottonBollCount++;
     }
 
-    // 6. Computer Vision Standard YCbCr Skin Tone Detection (Selfies, portraits, human faces, anime/cartoon skin)
+    if (isNecrosisOrRot) {
+      cropNecrosisRotCount++;
+    }
+
+    // 7. Computer Vision Standard YCbCr Skin Tone Detection (Selfies, portraits, human faces, anime/cartoon skin)
     const y = 0.299 * r + 0.587 * g + 0.114 * b;
     const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
     const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
     const isSkinYCbCr = cr >= 135 && cr <= 180 && cb >= 80 && cb <= 135 && y >= 50;
     const isSkinRGB = r > 105 && g > 65 && b > 45 && r > g + 12 && g > b + 8 && (r - b >= 30);
 
-    if ((isSkinYCbCr || isSkinRGB) && !isGreenFoliage && !isNecrosisOrRot) {
+    if ((isSkinYCbCr || isSkinRGB) && !isGreenFoliage) {
       humanFaceSkinCount++;
     }
 
-    // 7. Synthetic Non-Plant Colors (Vehicles, plastics, headphones, neon, synthetic blues)
+    // 8. Synthetic Non-Plant Colors (Vehicles, plastics, headphones, neon, synthetic blues)
     const isSyntheticBlue = b > r * 1.35 && b > g * 1.25 && b > 65;
     const isSyntheticPlasticRed = r > 170 && g < 50 && b < 50;
     if (isSyntheticBlue || isSyntheticPlasticRed) {
       syntheticColorCount++;
     }
 
-    // 8. Plain White Document / Paper / Graph Paper Grid
+    // 9. Plain White Document / Paper / Graph Paper Grid
     const isPaperOrScreen =
       r > 215 && g > 215 && b > 210 &&
       Math.abs(r - g) < 12 && Math.abs(g - b) < 12;
-    if (isPaperOrScreen) {
+    if (isPaperOrScreen && !isCottonBoll) {
       paperDocumentCount++;
     }
 
-    // 9. Sharp Dark Ink Outlines (Anime, manga, cartoons, line drawings)
+    // 10. Sharp Dark Ink Outlines (Anime, manga, cartoons, line drawings)
     if (r < 50 && g < 50 && b < 50) {
       darkInkLineCount++;
     }
@@ -176,10 +183,10 @@ export function validateImageClient(
 
   const greenRatio = greenFoliageCount / totalPixels;
   const chloroticRatio = chloroticYellowCount / totalPixels;
-  const podRatio = isPodOrTuberCrop ? (podHuskSoilCount / totalPixels) : 0;
-  const fruitRatio = isFruitCrop ? (fruitRedPurpleCount / totalPixels) : 0;
-  const hasHostPlantTissue = greenRatio + chloroticRatio + podRatio + fruitRatio >= 0.03;
-  const necrosisRatio = hasHostPlantTissue ? (cropNecrosisRotCount / totalPixels) : 0;
+  const podRatio = podHuskSoilCount / totalPixels;
+  const fruitRatio = fruitRedPurpleCount / totalPixels;
+  const necrosisRatio = cropNecrosisRotCount / totalPixels;
+  const cottonRatio = cottonBollCount / totalPixels;
 
   const skinRatio = humanFaceSkinCount / totalPixels;
   const syntheticRatio = syntheticColorCount / totalPixels;
@@ -187,20 +194,29 @@ export function validateImageClient(
   const inkLineRatio = darkInkLineCount / totalPixels;
   const uniqueColors = uniqueColorBins.size;
 
-  const totalAgriculturalRatio =
-    greenRatio + chloroticRatio + podRatio + fruitRatio + necrosisRatio;
-
   // Genuine crop presence verification
-  const hasGenuineCropFoliage = greenRatio >= 0.06 || chloroticRatio >= 0.07;
-  const hasGenuinePodOrTuber = isPodOrTuberCrop && podRatio >= 0.07;
-  const hasGenuineFruit = isFruitCrop && fruitRatio >= 0.12 && (greenRatio >= 0.03 || chloroticRatio >= 0.03);
-  const hasGenuineCropSpecimen = hasGenuineCropFoliage || hasGenuinePodOrTuber || hasGenuineFruit;
+  const hasGenuineCropFoliage = greenRatio >= 0.05 || chloroticRatio >= 0.06;
+  const hasGenuinePodOrTuber = podRatio >= 0.06;
+  const hasGenuineFruit =
+    fruitRatio >= 0.10 &&
+    (greenRatio >= 0.02 || chloroticRatio >= 0.02 || necrosisRatio >= 0.02 || podRatio >= 0.02);
+  const hasGenuineCotton = cottonRatio >= 0.08 && (greenRatio >= 0.02 || podRatio >= 0.02);
+  const hasGenuineCropSpecimen = hasGenuineCropFoliage || hasGenuinePodOrTuber || hasGenuineFruit || hasGenuineCotton;
+
+  const totalAgriculturalRatio =
+    greenRatio +
+    chloroticRatio +
+    (hasGenuinePodOrTuber ? podRatio : 0) +
+    (hasGenuineFruit ? fruitRatio : 0) +
+    (hasGenuineCotton ? cottonRatio : 0) +
+    (hasGenuineCropSpecimen ? necrosisRatio : 0);
 
   // =========================================================================
   // GATEKEEPER 1: HUMAN SELFIE, PORTRAIT, FACE, OR DRAWING OF A PERSON
   // Any image with human skin tones (>8%) and no genuine crop specimen is rejected
+  // If human skin dominates over plant elements, reject as person photo
   // =========================================================================
-  if (skinRatio > 0.08 && !hasGenuineCropSpecimen) {
+  if ((skinRatio > 0.08 && !hasGenuineCropSpecimen) || (skinRatio > 0.18 && skinRatio > totalAgriculturalRatio)) {
     return {
       isValid: false,
       reason: 'human_or_selfie',
@@ -252,23 +268,9 @@ export function validateImageClient(
   }
 
   // =========================================================================
-  // GATEKEEPER 5: FOLIAGE & PLANT CROP CONSISTENCY CHECK
-  // Maize, Rice, Cotton, Wheat, Sugarcane, Vegetables strictly require genuine plant tissue!
+  // GATEKEEPER 5: GENERAL AGRICULTURAL EVIDENCE THRESHOLD
   // =========================================================================
-  if (!isPodOrTuberCrop && !hasGenuineCropSpecimen) {
-    return {
-      isValid: false,
-      reason: 'not_plant',
-      message: 'Crop not detected. No agricultural leaves, foliage, or plant features were found. Random photos are not accepted.',
-      plantRatio: totalAgriculturalRatio,
-      skinRatio,
-    };
-  }
-
-  // =========================================================================
-  // GATEKEEPER 6: GENERAL AGRICULTURAL EVIDENCE THRESHOLD
-  // =========================================================================
-  if (totalAgriculturalRatio < 0.10) {
+  if (!hasGenuineCropSpecimen && totalAgriculturalRatio < 0.10) {
     return {
       isValid: false,
       reason: 'not_plant',
@@ -278,11 +280,60 @@ export function validateImageClient(
     };
   }
 
+  // =========================================================================
+  // ACCURATE CROP & PATHOLOGY IDENTIFICATION FROM IMAGE
+  // =========================================================================
+  let detectedCrop: string | undefined = undefined;
+  const detectedSymptoms: string[] = [];
+
+  // A. Detect Tomato (Ripe red globular fruit with green vines/calyx or dark rot lesions, distinct from pod)
+  if (fruitRatio >= 0.12 && (greenRatio >= 0.02 || necrosisRatio >= 0.02) && fruitRatio > podRatio * 1.3) {
+    detectedCrop = 'Tomato';
+    if (necrosisRatio >= 0.02) {
+      detectedSymptoms.push('fruitRot');
+      detectedSymptoms.push('brownSpots');
+    }
+  }
+  // B. Detect Groundnut (Earthy pod shells in pods or clusters)
+  else if (podRatio >= 0.06 && podRatio > fruitRatio) {
+    detectedCrop = 'Groundnut';
+    if (necrosisRatio >= 0.005) {
+      detectedSymptoms.push('podRot');
+      detectedSymptoms.push('brownSpots');
+    }
+  }
+  // C. Detect Chilli (Elongated fruits with prominent red/green peppers)
+  else if ((fruitRatio >= 0.08 && hint.includes('chilli')) || (fruitRatio >= 0.06 && greenRatio >= 0.15 && hint.includes('chilli'))) {
+    detectedCrop = 'Chilli';
+    if (necrosisRatio >= 0.02) {
+      detectedSymptoms.push('fruitRot');
+      detectedSymptoms.push('brownSpots');
+    }
+  }
+  // D. Detect Cotton (Fluffy white bolls)
+  else if (cottonRatio >= 0.08 && (greenRatio >= 0.02 || podRatio >= 0.02)) {
+    detectedCrop = 'Cotton';
+    if (necrosisRatio >= 0.02) {
+      detectedSymptoms.push('brownSpots');
+    }
+  }
+  // E. Detect Foliage crops (Rice, Maize, Cotton leaves)
+  else if (greenRatio >= 0.10) {
+    if (chloroticRatio >= 0.10) {
+      detectedSymptoms.push('yellowLeaves');
+    }
+    if (necrosisRatio >= 0.025) {
+      detectedSymptoms.push('brownSpots');
+    }
+  }
+
   return {
     isValid: true,
     message: 'Crop photo verified',
     plantRatio: totalAgriculturalRatio,
     skinRatio,
+    detectedCrop,
+    detectedSymptoms,
   };
 }
 

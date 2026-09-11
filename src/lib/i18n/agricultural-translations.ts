@@ -87,6 +87,32 @@ const ACTION_DICTIONARY: LocalizedItem[] = [
     keywords: ['uniform soil moisture', 'తేమ సమతుల్యంగా', 'नमी का संतुलन'],
   },
 
+  // Tomato Fruit Rot / Anthracnose
+  {
+    en: 'Foliar spray Azoxystrobin 23% SC @ 1 ml/L or Difenoconazole 25% EC @ 1 ml/L targeting fruit clusters.',
+    te: 'అజోక్సిస్ట్రోబిన్ 23% SC (@ 1 మి.లీ/లీ) లేదా డైఫెనోకోనజోల్ 25% EC (@ 1 మి.లీ/లీ) కాయల గుత్తులు తడిసేలా పిచికారీ చేయండి.',
+    hi: 'एजोक्सीस्ट्रोबिन 23% SC (1 मिली/लीटर) या डाइफेनोकोनाजोल (1 मिली/लीटर) का छिड़काव करें।',
+    keywords: ['azoxystrobin', 'difenoconazole', 'అజోక్సిస్ట్రోబిన్', 'డైఫెనోకోనజోల్', 'एजोक्सीस्ट्रोबिन', 'fruit clusters'],
+  },
+  {
+    en: 'Apply Mancozeb 75% WP @ 2.5 g/L as a protective broad-spectrum fungicide.',
+    te: 'రక్షణగా మాంకోజెబ్ 75% WP (@ 2.5 గ్రా/లీ) నీటికి కలిపి పిచికారీ చేయండి.',
+    hi: 'सुरक्षात्मक फफूंदनाशक मैंकोजेब 75% WP (2.5 ग्राम/लीटर) का तुरंत छिड़काव करें।',
+    keywords: ['mancozeb 75%', 'మాంకోజెబ్ 75%', 'मैंकोजेब 75%'],
+  },
+  {
+    en: 'Pick and safely bury severely spotted or decaying fruits to prevent fungal spore dispersal.',
+    te: 'మచ్చలు పడి కుళ్ళిన కాయలను వెంటనే ఏరివేసి దూరంగా భూమిలో పూడ్చిపెట్టండి.',
+    hi: 'संक्रमित व सड़े हुए फलों को तुरंत तोड़कर जमीन में दबा दें ताकि रोग अन्य फलों में न फैले।',
+    keywords: ['safely bury', 'decaying fruits', 'భూమిలో పూడ్చిపెట్టండి', 'जमीन में दबा दें'],
+  },
+  {
+    en: 'Stake vines and avoid overhead watering to prevent soil splash onto tomato fruits.',
+    te: 'మొక్కలకు కట్టెల ఆధారం (Staking) ఇచ్చి కాయలు నేలను తాకకుండా చూడండి; పైనుండి నీరు చిమ్మవద్దు.',
+    hi: 'पौधों को डंडियों का सहारा दें और ऊपर से पानी छिड़कने से बचें।',
+    keywords: ['stake vines', 'overhead watering', 'కట్టెల ఆధారం', 'डंडियों का सहारा'],
+  },
+
   // Multi-evidence enrichment actions
   {
     en: 'Perform immediate whole-field curative spray to arrest widespread yield loss.',
@@ -308,6 +334,18 @@ const DIAGNOSIS_DICTIONARY: LocalizedItem[] = [
 
   // Tomato
   {
+    en: 'Tomato Anthracnose & Fruit Rot (Colletotrichum coccodes)',
+    te: 'టమాటలో కాయ కుళ్లు మరియు ఆంత్రాక్నోస్ తెగులు (Fruit Rot & Anthracnose)',
+    hi: 'टमाटर में फल सड़न एवं एन्थ्रेक्नोज रोग (Fruit Rot & Anthracnose)',
+    keywords: ['fruit rot', 'anthracnose', 'కాయ కుళ్లు', 'ఆంత్రాక్నోస్', 'फल सड़न', 'एन्थ्रेक्नोज', 'colletotrichum'],
+  },
+  {
+    en: 'Sunken water-soaked lesions and circular dark necrotic rot spots detected on tomato fruits.',
+    te: 'టమాట కాయలపై గుండ్రటి నల్లటి గుంతల వంటి మచ్చలు మరియు కుళ్లు వ్యాప్తి చెందుతోంది.',
+    hi: 'टमाटर के फलों पर गोल काले धंसे हुए धब्बे और फंगस का गंभीर संक्रमण देखा गया है।',
+    keywords: ['sunken water-soaked', 'గుంతల వంటి మచ్చలు', 'काले धंसे हुए धब्बे', 'rot spots detected on tomato'],
+  },
+  {
     en: 'Early Blight (Alternaria solani) on Tomato',
     te: 'టమాటలో ఆల్టర్నేరియా ఆకుమచ్చ లేదా ఎర్లీ బ్లైట్ తెగులు (Early Blight)',
     hi: 'टमाटर में अगेती झुलसा या अल्टरनेरिया पत्ता धब्बा (Early Blight)',
@@ -406,6 +444,18 @@ const WHY_REASONS_DICTIONARY: LocalizedItem[] = [
     te: 'వేరుశనగ కాయలు మరియు పెంకులపై నల్లటి ఫంగస్ మచ్చలు స్పష్టంగా గుర్తించబడ్డాయి.',
     hi: 'मूंगफली की फलियों पर काले फंगल धब्बे और छिलके का क्षरण देखा गया है।',
     keywords: ['black necrotic fungal spots', 'నల్లటి ఫంగస్ మచ్చలు', 'काले फंगल धब्बे'],
+  },
+  {
+    en: 'Target-like sunken dark necrotic lesions observed directly on developing tomato fruit surface.',
+    te: 'కాయలపై నీటి మచ్చలు, గుంతల వంటి నల్లటి శిలీంధ్ర మచ్చలు స్పష్టంగా గమనించబడ్డాయి.',
+    hi: 'फलों की सतह पर पानीदार धंसे हुए गहरे काले घाव और धब्बे पाए गए हैं।',
+    keywords: ['sunken dark necrotic', 'developing tomato fruit', 'గుంతల వంటి నల్లటి', 'धंसे हुए गहरे काले घाव'],
+  },
+  {
+    en: 'High ambient humidity accelerates Colletotrichum fungal mycelium expansion on fruits.',
+    te: 'గాలిలో అధిక తేమ కాయలపై శిలీంధ్రం వేగంగా విస్తరించడానికి కారణమవుతోంది.',
+    hi: 'हवा में अधिक नमी से फल सड़न फंगस तेजी से बढ़ती है।',
+    keywords: ['colletotrichum fungal mycelium', 'శిలీంధ్రం వేగంగా విస్తరించడానికి', 'फल सड़न फंगस तेजी से बढ़ती है'],
   },
   {
     en: 'Target-like concentric ring brown lesions observed on foliage.',

@@ -130,7 +130,13 @@ export function CropWizard() {
   const [compressedDataUrl, setCompressedDataUrl] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
-  const [imageValidationInfo, setImageValidationInfo] = useState<{ isValid: boolean; plantRatio?: number; skinRatio?: number } | null>(null);
+  const [imageValidationInfo, setImageValidationInfo] = useState<{
+    isValid: boolean;
+    plantRatio?: number;
+    skinRatio?: number;
+    detectedCrop?: string;
+    detectedSymptoms?: string[];
+  } | null>(null);
   const [hasVoiceInput, setHasVoiceInput] = useState<boolean>(false);
   const autoAnalyzeTimerRef = useRef<any>(null);
 
@@ -304,7 +310,18 @@ export function CropWizard() {
           isValid: true,
           plantRatio: validation.plantRatio,
           skinRatio: validation.skinRatio,
+          detectedCrop: validation.detectedCrop,
+          detectedSymptoms: validation.detectedSymptoms,
         });
+
+        // Automatically adapt crop and symptoms to the real image content
+        if (validation.detectedCrop) {
+          setSelectedCrop(validation.detectedCrop);
+        }
+        if (validation.detectedSymptoms && validation.detectedSymptoms.length > 0) {
+          setSelectedSymptoms((prev) => Array.from(new Set([...prev, ...(validation.detectedSymptoms || [])])));
+        }
+
         setPhotoError(null);
         setIsCompressing(false);
 
@@ -346,7 +363,7 @@ export function CropWizard() {
     }, 450);
 
     try {
-      const activeCropName = selectedCrop === 'Other' ? (customCrop || 'Crop') : selectedCrop;
+      const activeCropName = imageValidationInfo?.detectedCrop || (selectedCrop === 'Other' ? (customCrop || 'Crop') : selectedCrop);
 
       // Check user-scoped history for previous assessment of same crop to compare
       let previousAssessment: any = undefined;
@@ -374,7 +391,7 @@ export function CropWizard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cropName: activeCropName,
-          symptoms: selectedSymptoms,
+          symptoms: Array.from(new Set([...selectedSymptoms, ...(imageValidationInfo?.detectedSymptoms || [])])),
           affectedArea,
           durationDays,
           previousCrop,
@@ -661,6 +678,18 @@ export function CropWizard() {
                   <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                   <span>Photo Ready</span>
                 </div>
+                {imageValidationInfo?.detectedCrop && (
+                  <div className="absolute top-3 left-3 bg-emerald-950/90 text-emerald-200 border border-emerald-400/50 px-3 py-1 rounded-full text-xs font-black backdrop-blur-sm flex items-center gap-1.5 shadow-md">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>
+                      {language === 'te'
+                        ? `గుర్తించిన పంట: ${imageValidationInfo.detectedCrop === 'Tomato' ? 'టమాటా' : imageValidationInfo.detectedCrop === 'Groundnut' ? 'వేరుశనగ' : imageValidationInfo.detectedCrop}`
+                        : language === 'hi'
+                        ? `पहचानी गई फसल: ${imageValidationInfo.detectedCrop === 'Tomato' ? 'टमाटर' : imageValidationInfo.detectedCrop === 'Groundnut' ? 'मूंगफली' : imageValidationInfo.detectedCrop}`
+                        : `Identified Crop: ${imageValidationInfo.detectedCrop}`}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3">

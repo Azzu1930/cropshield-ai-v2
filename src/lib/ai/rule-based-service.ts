@@ -97,14 +97,19 @@ export class RuleBasedAIService implements AIService {
       };
     }
 
-    const cropKey = (cropName || '').toLowerCase().trim();
-    const hasBrownSpots = symptoms.includes('brownSpots') || symptoms.some(s => s.toLowerCase().includes('spot') || s.toLowerCase().includes('మచ్చ') || s.toLowerCase().includes('धब्बे'));
-    const hasYellowLeaves = symptoms.includes('yellowLeaves') || symptoms.some(s => s.toLowerCase().includes('yellow') || s.toLowerCase().includes('పసుపు') || s.toLowerCase().includes('पीले'));
-    const hasInsects = symptoms.includes('insects') || symptoms.some(s => s.toLowerCase().includes('insect') || s.toLowerCase().includes('పురుగు') || s.toLowerCase().includes('कीड़े'));
-    const hasDrying = symptoms.includes('drying') || symptoms.some(s => s.toLowerCase().includes('dry') || s.toLowerCase().includes('ఎండి') || s.toLowerCase().includes('सूख'));
-    const hasWilting = symptoms.includes('wilting') || symptoms.some(s => s.toLowerCase().includes('wilt') || s.toLowerCase().includes('వడలి') || s.toLowerCase().includes('मुरझा'));
-    const hasPoorGrowth = symptoms.includes('poorGrowth') || symptoms.some(s => s.toLowerCase().includes('growth') || s.toLowerCase().includes('ఎదుగుదల') || s.toLowerCase().includes('बढ़वार'));
-    const hasPodRot = symptoms.includes('podRot') || symptoms.some(s => s.toLowerCase().includes('pod') || s.toLowerCase().includes('కాయ') || s.toLowerCase().includes('కుళ్ళు') || s.toLowerCase().includes('सड़न') || s.toLowerCase().includes('फली'));
+    const effectiveCrop = imageValidation?.detectedCrop || cropName || 'Crop';
+    const cropKey = effectiveCrop.toLowerCase().trim();
+    const effectiveSymptoms = Array.from(
+      new Set([...symptoms, ...(imageValidation?.detectedSymptoms || [])])
+    );
+    const hasBrownSpots = effectiveSymptoms.includes('brownSpots') || effectiveSymptoms.some(s => s.toLowerCase().includes('spot') || s.toLowerCase().includes('మచ్చ') || s.toLowerCase().includes('धब्बे'));
+    const hasYellowLeaves = effectiveSymptoms.includes('yellowLeaves') || effectiveSymptoms.some(s => s.toLowerCase().includes('yellow') || s.toLowerCase().includes('పసుపు') || s.toLowerCase().includes('पीले'));
+    const hasInsects = effectiveSymptoms.includes('insects') || effectiveSymptoms.some(s => s.toLowerCase().includes('insect') || s.toLowerCase().includes('పురుగు') || s.toLowerCase().includes('कीड़े'));
+    const hasDrying = effectiveSymptoms.includes('drying') || effectiveSymptoms.some(s => s.toLowerCase().includes('dry') || s.toLowerCase().includes('ఎండి') || s.toLowerCase().includes('सूख'));
+    const hasWilting = effectiveSymptoms.includes('wilting') || effectiveSymptoms.some(s => s.toLowerCase().includes('wilt') || s.toLowerCase().includes('వడలి') || s.toLowerCase().includes('मурझा'));
+    const hasPoorGrowth = effectiveSymptoms.includes('poorGrowth') || effectiveSymptoms.some(s => s.toLowerCase().includes('growth') || s.toLowerCase().includes('ఎదుగుదల') || s.toLowerCase().includes('बढ़वार'));
+    const hasPodRot = effectiveSymptoms.includes('podRot') || effectiveSymptoms.some(s => s.toLowerCase().includes('pod') || s.toLowerCase().includes('కాయ') || s.toLowerCase().includes('కుళ్ళు') || s.toLowerCase().includes('सड़न') || s.toLowerCase().includes('फली'));
+    const hasFruitRot = effectiveSymptoms.includes('fruitRot') || effectiveSymptoms.some(s => s.toLowerCase().includes('fruitrot') || s.toLowerCase().includes('కాయ కుళ్లు') || s.toLowerCase().includes('फल सड़न') || s.toLowerCase().includes('anthracnose'));
 
     const humidity = weatherData?.humidity ?? 72;
     const temp = weatherData?.temperature ?? 31;
@@ -130,8 +135,40 @@ export class RuleBasedAIService implements AIService {
     // =========================================================================
     // 1. TOMATO (టమాట / टमाटर)
     // =========================================================================
-    if (cropKey.includes('tomato') || cropKey.includes('టమాట') || cropKey.includes('टमाटर')) {
-      if (hasBrownSpots || (humidity > 75 && rainProb > 30)) {
+    if (cropKey.includes('tomato') || cropKey.includes('టమాట') || cropKey.includes('టమోటా') || cropKey.includes('टमाटर')) {
+      if (hasFruitRot || effectiveSymptoms.includes('fruitRot')) {
+        seriousness = 'HIGH';
+        issueCategory = 'fungal';
+        confidenceScore = 0.94;
+        if (language === 'te') {
+          possibleIssue = 'టమాటలో కాయ కుళ్లు మరియు ఆంత్రాక్నోస్ తెగులు (Fruit Rot & Anthracnose)';
+          explanation = 'టమాట కాయలపై గుండ్రటి నల్లటి గుంతల వంటి మచ్చలు మరియు కుళ్లు వ్యాప్తి చెందుతోంది.';
+          whyReasons.push('కాయలపై నీటి మచ్చలు, గుంతల వంటి నల్లటి శిలీంధ్ర మచ్చలు స్పష్టంగా గమనించబడ్డాయి.');
+          whyReasons.push(`గాలిలో అధిక తేమ (${humidity}%) కాయలపై శిలీంధ్రం వేగంగా విస్తరించడానికి కారణమవుతోంది.`);
+          actions.push('అజోక్సిస్ట్రోబిన్ 23% SC (@ 1 మి.లీ/లీ) లేదా డైఫెనోకోనజోల్ 25% EC (@ 1 మి.లీ/లీ) కాయల గుత్తులు తడిసేలా పిచికారీ చేయండి.');
+          actions.push('రక్షణగా మాంకోజెబ్ 75% WP (@ 2.5 గ్రా/లీ) నీటికి కలిపి పిచికారీ చేయండి.');
+          actions.push('మచ్చలు పడి కుళ్ళిన కాయలను వెంటనే ఏరివేసి దూరంగా భూమిలో పూడ్చిపెట్టండి.');
+          actions.push('మొక్కలకు కట్టెల ఆధారం (Staking) ఇచ్చి కాయలు నేలను తాకకుండా చూడండి; పైనుండి నీరు చిమ్మవద్దు.');
+        } else if (language === 'hi') {
+          possibleIssue = 'टमाटर में फल सड़न एवं एन्थ्रेक्नोज रोग (Fruit Rot & Anthracnose)';
+          explanation = 'टमाटर के फलों पर गोल काले धंसे हुए धब्बे और फंगस का गंभीर संक्रमण देखा गया है।';
+          whyReasons.push('फलों की सतह पर पानीदार धंसे हुए गहरे काले घाव और धब्बे पाए गए हैं।');
+          whyReasons.push(`हवा में अधिक नमी (${humidity}%) से फल सड़न फंगस तेजी से बढ़ती है।`);
+          actions.push('एजोक्सीस्ट्रोबिन 23% SC (1 मिली/लीटर) या डाइफेनोकोनाजोल (1 मिली/लीटर) का छिड़काव करें।');
+          actions.push('सुरक्षात्मक फफूंदनाशक मैंकोजेब 75% WP (2.5 ग्राम/लीटर) का तुरंत छिड़काव करें।');
+          actions.push('संक्रमित व सड़े हुए फलों को तुरंत तोड़कर जमीन में दबा दें ताकि रोग अन्य फलों में न फैले।');
+          actions.push('पौधों को डंडियों का सहारा दें और ऊपर से पानी छिड़कने से बचें।');
+        } else {
+          possibleIssue = 'Tomato Anthracnose & Fruit Rot (Colletotrichum coccodes)';
+          explanation = 'Sunken water-soaked lesions and circular dark necrotic rot spots detected on tomato fruits.';
+          whyReasons.push('Target-like sunken dark necrotic lesions observed directly on developing tomato fruit surface.');
+          whyReasons.push(`High ambient humidity (${humidity}%) accelerates Colletotrichum fungal mycelium expansion.`);
+          actions.push('Foliar spray Azoxystrobin 23% SC @ 1 ml/L or Difenoconazole 25% EC @ 1 ml/L targeting fruit clusters.');
+          actions.push('Apply Mancozeb 75% WP @ 2.5 g/L as a protective broad-spectrum fungicide.');
+          actions.push('Pick and safely bury severely spotted or decaying fruits to prevent fungal spore dispersal.');
+          actions.push('Stake vines and avoid overhead watering to prevent soil splash onto tomato fruits.');
+        }
+      } else if (hasBrownSpots || (humidity > 75 && rainProb > 30)) {
         seriousness = 'MEDIUM';
         issueCategory = 'fungal';
         confidenceScore = 0.91;

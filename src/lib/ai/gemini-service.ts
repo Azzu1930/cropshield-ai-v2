@@ -38,6 +38,12 @@ export class GeminiAIService implements AIService {
         previousCrop,
       } = params;
 
+      const detectedCrop = params.imageValidation?.detectedCrop;
+      const effectiveCrop = detectedCrop || cropName;
+      const effectiveSymptoms = Array.from(
+        new Set([...symptoms, ...(params.imageValidation?.detectedSymptoms || [])])
+      );
+
       const langName = language === 'te' ? 'Telugu' : language === 'hi' ? 'Hindi' : 'English';
 
       const prompt = `You are CropShield AI, an elite agronomist and crop disease pathologist specializing in Indian agriculture (ICAR/KVK standards).
@@ -64,12 +70,13 @@ CRITICAL ACCURACY & CROP VALIDATION RULES:
    Do NOT provide any crop diagnosis, diseases, or remedies for non-crop images. Under NO circumstance should you diagnose an anime, cartoon, drawing, person, or non-plant image as a crop!
 
 1. Only if the photo is an actual crop, plant, leaf, fruit, or pod, proceed with detailed diagnosis:
-   Examine the photo carefully (look for circular lesions, target-like rings, pustules, chlorosis, vein clearing, curling, insect bites, or dark fungal rot spots on pods).
-2. The diagnosis ("possibleIssue") and 4 action steps MUST be strictly specific to the crop: "${cropName}".
+   Examine the photo carefully (look for circular lesions, target-like rings, pustules, chlorosis, vein clearing, curling, insect bites, or dark fungal rot spots on pods or fruits).
+   Note: Visual analysis suggests this crop is: "${effectiveCrop}". If the image depicts a different crop from "${cropName}", diagnose the actual crop shown in the image!
+2. The diagnosis ("possibleIssue") and 4 action steps MUST be strictly specific to the crop: "${effectiveCrop}".
+   - For Tomato: Distinguish between Anthracnose & Fruit Rot (Colletotrichum sunken circular dark rot spots on fruits), Early Blight (Alternaria on leaves), Late Blight, Tomato Leaf Curl Virus, Fruit Borer, or Blossom End Rot. If fruit has dark rot spots, prescribe Azoxystrobin (1 ml/L) or Difenoconazole (1 ml/L), Mancozeb (2.5 g/L), and fruit burial hygiene.
    - For Groundnut / Peanut: Distinguish between Pod Rot / Black Pod Spots (Rhizoctonia/Aspergillus/Pythium), Tikka Leaf Spot (Cercospora with yellow halo), Collar Rot (Sclerotium rolfsii), Rust (Puccinia arachidis), or Sucking pests. If pods have dark spots/lesions, diagnose Groundnut Pod Rot and prescribe Gypsum (200-250 kg/acre), Trichoderma viride enriched FYM, and Tebuconazole (1.5 ml/L) or Carbendazim+Mancozeb.
-   - For Tomato: Distinguish between Early Blight (Alternaria), Late Blight, Tomato Leaf Curl Virus, Fruit Borer, or Blossom End Rot.
    - For Rice: Distinguish between Blast, Brown Spot, BLB, Stem Borer, or BPH.
-   - For Chilli: Distinguish between Thrips/Mite Leaf Curl, Anthracnose Dieback, or Powdery Mildew.
+   - For Chilli: Distinguish between Thrips/Mite Leaf Curl, Anthracnose Dieback & Fruit Rot, or Powdery Mildew.
    - For Cotton: Distinguish between Pink Bollworm, Leaf Reddening, or Angular Leaf Spot.
    - For Maize: Distinguish between Fall Armyworm, Turcicum Blight, or Nitrogen deficiency.
 3. INCORPORATE FIELD IMPACT & ROTATION EVIDENCE:
@@ -80,8 +87,8 @@ CRITICAL ACCURACY & CROP VALIDATION RULES:
 5. All text fields MUST be ENTIRELY in ${langName} using respectful, empathetic words that rural farmers easily grasp.
 
 EVIDENCE COLLECTED:
-- Crop: ${cropName}
-- Observed symptoms: ${symptoms.join(', ') || 'General check'}
+- Crop: ${effectiveCrop}
+- Observed symptoms: ${effectiveSymptoms.join(', ') || 'General check'}
 - Area of field affected: ${affectedArea || 'Unspecified'}
 - Duration of symptoms: ${durationDays || 'Unspecified'}
 - Previous crop grown: ${previousCrop || 'Unspecified'}
