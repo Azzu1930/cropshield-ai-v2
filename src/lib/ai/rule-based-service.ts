@@ -65,8 +65,12 @@ export class RuleBasedAIService implements AIService {
     const isTe = language === 'te';
     const isHi = language === 'hi';
 
-    // Gatekeeper: If image was validated as invalid/non-crop, refuse to generate diagnosis
-    if (imageValidation && imageValidation.isValid === false) {
+    // Gatekeeper: If image was validated as invalid/non-crop or missing, refuse to generate diagnosis
+    if (
+      (imageValidation && imageValidation.isValid === false) ||
+      !imageDataUrl ||
+      imageDataUrl.length < 200
+    ) {
       return {
         isCropDetected: false,
         possibleIssue: 'CROP_NOT_DETECTED',

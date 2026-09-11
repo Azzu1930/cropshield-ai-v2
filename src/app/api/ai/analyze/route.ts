@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
     // Pre-AI Image check: If client-side or base64 flag indicates human/selfie or invalid photo
     if (
       body.isInvalidHumanPhoto ||
+      !imageDataUrl ||
+      imageDataUrl.length < 200 ||
       (body.imageValidation && body.imageValidation.isValid === false)
     ) {
       return NextResponse.json(

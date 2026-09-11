@@ -272,7 +272,11 @@ export function CropWizard() {
         if (!validation.isValid) {
           setPhotoPreview(null);
           setCompressedDataUrl(null);
-          setImageValidationInfo(null);
+          setImageValidationInfo({
+            isValid: false,
+            plantRatio: validation.plantRatio,
+            skinRatio: validation.skinRatio,
+          });
           setPhotoError(
             validation.reason === 'human_or_selfie' || validation.reason === 'drawing_or_cartoon'
               ? (language === 'te'

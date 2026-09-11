@@ -62,6 +62,16 @@ export function validateImageClient(
     hint.includes('మూంగఫలీ') ||
     hint.includes('मूंगफली');
 
+  const isFruitCrop =
+    hint.includes('tomato') ||
+    hint.includes('chilli') ||
+    hint.includes('chili') ||
+    hint.includes('pepper') ||
+    hint.includes('టమాటా') ||
+    hint.includes('మిరప') ||
+    hint.includes('टमाटर') ||
+    hint.includes('मिर्च');
+
   let greenFoliageCount = 0;
   let chloroticYellowCount = 0;
   let podHuskSoilCount = 0;
@@ -85,18 +95,17 @@ export function validateImageClient(
     uniqueColorBins.add(colorKey);
 
     // 1. Chlorophyll Green Foliage (Leaves, stems, vegetative canopy)
-    const isGreenFoliage = g > r * 1.06 && g > b * 1.08 && g >= 32;
+    const isGreenFoliage = g > r * 1.08 && g > b * 1.15 && (g - b >= 14) && g >= 32;
 
     // 2. Chlorotic Leaf Yellowing (Yellowing leaf lesions, senescence, golden cereal grain)
-    // Real leaf chlorosis has R and G very close, and B significantly lower
     const isChloroticYellow =
-      r > 85 &&
-      g > 80 &&
-      Math.abs(r - g) <= 35 &&
-      b < Math.min(r, g) * 0.70;
+      r > 90 &&
+      g > 85 &&
+      Math.abs(r - g) <= 30 &&
+      b < Math.min(r, g) * 0.65;
 
     // 3. Pods, Seeds, Tubers, and Field Soil (Earthy tan, ochre, khaki)
-    // ONLY counted if the crop is Groundnut, Peanut, or Tuber
+    // ONLY counted if the crop is Groundnut, Peanut, or Potato
     const isPodOrHusk =
       isPodOrTuberCrop &&
       r >= 95 && r <= 185 &&
@@ -115,9 +124,11 @@ export function validateImageClient(
       (r + g + b < 190);
 
     // 5. Vegetable & Fruit Pigments (Ripe tomatoes, red chillies)
+    // Strictly counted ONLY for verified fruit crops (Tomato, Chilli)
     const isFruitOrFlower =
-      (r > 125 && r > g * 1.35 && r > b * 1.35) ||
-      (r > 75 && b > 75 && g < Math.min(r, b) * 0.85);
+      isFruitCrop &&
+      r >= 130 && r > g * 1.45 && r > b * 1.45 &&
+      g < 115 && b < 85 && (r - g >= 35);
 
     if (isGreenFoliage) {
       greenFoliageCount++;
@@ -136,7 +147,7 @@ export function validateImageClient(
     const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
     const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
     const isSkinYCbCr = cr >= 135 && cr <= 180 && cb >= 80 && cb <= 135 && y >= 50;
-    const isSkinRGB = r > 110 && g > 70 && b > 50 && r > g + 15 && g > b + 10 && (r - b >= 35);
+    const isSkinRGB = r > 105 && g > 65 && b > 45 && r > g + 12 && g > b + 8 && (r - b >= 30);
 
     if ((isSkinYCbCr || isSkinRGB) && !isGreenFoliage && !isNecrosisOrRot) {
       humanFaceSkinCount++;
@@ -165,9 +176,11 @@ export function validateImageClient(
 
   const greenRatio = greenFoliageCount / totalPixels;
   const chloroticRatio = chloroticYellowCount / totalPixels;
-  const podRatio = podHuskSoilCount / totalPixels;
-  const necrosisRatio = cropNecrosisRotCount / totalPixels;
-  const fruitRatio = fruitRedPurpleCount / totalPixels;
+  const podRatio = isPodOrTuberCrop ? (podHuskSoilCount / totalPixels) : 0;
+  const fruitRatio = isFruitCrop ? (fruitRedPurpleCount / totalPixels) : 0;
+  const hasHostPlantTissue = greenRatio + chloroticRatio + podRatio + fruitRatio >= 0.03;
+  const necrosisRatio = hasHostPlantTissue ? (cropNecrosisRotCount / totalPixels) : 0;
+
   const skinRatio = humanFaceSkinCount / totalPixels;
   const syntheticRatio = syntheticColorCount / totalPixels;
   const paperRatio = paperDocumentCount / totalPixels;
@@ -175,16 +188,23 @@ export function validateImageClient(
   const uniqueColors = uniqueColorBins.size;
 
   const totalAgriculturalRatio =
-    greenRatio + chloroticRatio + (isPodOrTuberCrop ? podRatio : 0) + fruitRatio + necrosisRatio;
+    greenRatio + chloroticRatio + podRatio + fruitRatio + necrosisRatio;
+
+  // Genuine crop presence verification
+  const hasGenuineCropFoliage = greenRatio >= 0.06 || chloroticRatio >= 0.07;
+  const hasGenuinePodOrTuber = isPodOrTuberCrop && podRatio >= 0.07;
+  const hasGenuineFruit = isFruitCrop && fruitRatio >= 0.12 && (greenRatio >= 0.03 || chloroticRatio >= 0.03);
+  const hasGenuineCropSpecimen = hasGenuineCropFoliage || hasGenuinePodOrTuber || hasGenuineFruit;
 
   // =========================================================================
-  // GATEKEEPER 1: HUMAN SELFIE, PORTRAIT, FACE, OR CHARACTER
+  // GATEKEEPER 1: HUMAN SELFIE, PORTRAIT, FACE, OR DRAWING OF A PERSON
+  // Any image with human skin tones (>8%) and no genuine crop specimen is rejected
   // =========================================================================
-  if (skinRatio > 0.09 && greenRatio < 0.05 && fruitRatio < 0.05) {
+  if (skinRatio > 0.08 && !hasGenuineCropSpecimen) {
     return {
       isValid: false,
       reason: 'human_or_selfie',
-      message: 'Crop not detected. Person, face, or portrait illustration detected. Please upload a clear photo of your crop leaf or plant.',
+      message: 'Crop not detected. Person, face, drawing, or selfie detected. Please upload a clear photo of your crop leaf or plant.',
       plantRatio: totalAgriculturalRatio,
       skinRatio,
     };
@@ -192,13 +212,10 @@ export function validateImageClient(
 
   // =========================================================================
   // GATEKEEPER 2: DIGITAL DRAWING, ANIME, CARTOON, MANGA, OR LINE ART
-  // Real camera photos of crops in sunlight have continuous micro-gradients (>900 unique color shades).
-  // Flat-shaded anime, drawings, and cartoons have low color variety or heavy ink outlines.
+  // Real photos of crops have continuous sensor noise and rich color entropy (>600 shades).
+  // Flat cel-shaded anime, line drawings, and digital art have low color variety or high dark outlines.
   // =========================================================================
-  if (
-    (uniqueColors < 450 && greenRatio < 0.08 && fruitRatio < 0.06) ||
-    (inkLineRatio > 0.08 && greenRatio < 0.05 && fruitRatio < 0.05)
-  ) {
+  if ((uniqueColors < 600 || inkLineRatio > 0.06) && !hasGenuineCropSpecimen) {
     return {
       isValid: false,
       reason: 'drawing_or_cartoon',
@@ -211,7 +228,7 @@ export function validateImageClient(
   // =========================================================================
   // GATEKEEPER 3: DOCUMENT, PAPER SKETCH, GRAPH PAPER, OR BLANK SURFACE
   // =========================================================================
-  if (paperRatio > 0.45 && greenRatio < 0.05 && fruitRatio < 0.05) {
+  if (paperRatio > 0.35 && !hasGenuineCropSpecimen) {
     return {
       isValid: false,
       reason: 'not_plant',
@@ -224,7 +241,7 @@ export function validateImageClient(
   // =========================================================================
   // GATEKEEPER 4: SYNTHETIC OBJECT, VEHICLE, PLASTIC, OR ELECTRONIC SCREEN
   // =========================================================================
-  if (syntheticRatio > 0.22 && greenRatio < 0.05 && fruitRatio < 0.05) {
+  if (syntheticRatio > 0.18 && !hasGenuineCropSpecimen) {
     return {
       isValid: false,
       reason: 'not_plant',
@@ -236,17 +253,9 @@ export function validateImageClient(
 
   // =========================================================================
   // GATEKEEPER 5: FOLIAGE & PLANT CROP CONSISTENCY CHECK
-  // Maize, Rice, Tomato, Chilli, Cotton are foliage/plant crops.
-  // A genuine photo of these crops MUST contain leaves, foliage, or fruit!
+  // Maize, Rice, Cotton, Wheat, Sugarcane, Vegetables strictly require genuine plant tissue!
   // =========================================================================
-  const isFoliageCrop = !isPodOrTuberCrop;
-  if (
-    isFoliageCrop &&
-    greenRatio < 0.04 &&
-    chloroticRatio < 0.06 &&
-    fruitRatio < 0.05 &&
-    necrosisRatio < 0.04
-  ) {
+  if (!isPodOrTuberCrop && !hasGenuineCropSpecimen) {
     return {
       isValid: false,
       reason: 'not_plant',
