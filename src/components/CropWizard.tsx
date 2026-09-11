@@ -274,11 +274,11 @@ export function CropWizard() {
           setCompressedDataUrl(null);
           setImageValidationInfo(null);
           setPhotoError(
-            validation.reason === 'human_or_selfie'
+            validation.reason === 'human_or_selfie' || validation.reason === 'drawing_or_cartoon'
               ? (language === 'te'
-                  ? 'పంట గుర్తించబడలేదు. మనిషి లేదా చిత్రం ఫోటో గుర్తించబడింది. దయచేసి పంట ఆకు లేదా పైరు ఫోటో తీయండి.'
+                  ? 'పంట గుర్తించబడలేదు. మనిషి, డ్రాయింగ్ లేదా చిత్రం ఫోటో గుర్తించబడింది. దయచేసి పొలంలోని పంట ఆకు లేదా పైరు ఫోటో తీయండి.'
                   : language === 'hi'
-                  ? 'फसल नहीं पहचानी गई। इंसान या चित्र पाया गया। कृपया केवल खेत की फसल या पत्ते की फोटो लें।'
+                  ? 'फसल नहीं पहचानी गई। इंसान, चित्र या कार्टून पाया गया। कृपया खेत की असली फसल या पत्ते की फोटो लें।'
                   : 'Crop not detected. Person, face, or drawing detected. Please upload a clear photo of your crop leaf or plant.')
               : (t.wizard.photoCropNotDetected || t.wizard.photoInvalidGeneral)
           );
@@ -324,6 +324,10 @@ export function CropWizard() {
   const executeAnalysis = async () => {
     if (autoAnalyzeTimerRef.current) {
       clearTimeout(autoAnalyzeTimerRef.current);
+    }
+    if (!compressedDataUrl || !!photoError || (imageValidationInfo && !imageValidationInfo.isValid)) {
+      setCurrentStep(2);
+      return;
     }
     setCurrentStep(8);
     setProgressStep(0);

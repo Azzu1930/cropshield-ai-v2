@@ -46,9 +46,9 @@ Analyze the multi-evidence agricultural data and the provided crop photo (which 
 TARGET LANGUAGE: ${langName}
 CRITICAL ACCURACY & CROP VALIDATION RULES:
 0. STRICT CROP IMAGE GATEKEEPER:
-   First, inspect the uploaded photo. Check whether it contains an actual agricultural crop, plant, leaf, flower, fruit, pod, seed, grain, tuber, root, or farm vegetation.
+   First, inspect the uploaded photo. Check whether it contains an actual, authentic agricultural crop, field plant, leaf, flower, fruit, pod, seed, grain, tuber, root, or farm vegetation.
    - Note: Groundnut pods/peanuts in shells, cotton bolls, potatoes, cereals, and dry legume pods are valid agricultural produce!
-   If the image is a person, human selfie, face, car, vehicle, indoor room, furniture, pet, animal, computer or mobile screen, document, paper, or random non-agricultural object:
+   If the image is a person, human selfie, face, anime, cartoon, comic, fictional character, drawing, sketch, illustration, graphic, artwork, meme, vehicle, indoor room, furniture, pet, animal, computer or mobile screen, document, graph paper, or ANY random non-agricultural object or image:
    YOU MUST RETURN:
    {
      "isCropDetected": false,
@@ -61,7 +61,7 @@ CRITICAL ACCURACY & CROP VALIDATION RULES:
      "whyReasons": ["The uploaded image does not contain an agricultural crop, leaf, or farm plant."],
      "actions": []
    }
-   Do NOT provide any crop diagnosis, diseases, or remedies for non-crop images.
+   Do NOT provide any crop diagnosis, diseases, or remedies for non-crop images. Under NO circumstance should you diagnose an anime, cartoon, drawing, person, or non-plant image as a crop!
 
 1. Only if the photo is an actual crop, plant, leaf, fruit, or pod, proceed with detailed diagnosis:
    Examine the photo carefully (look for circular lesions, target-like rings, pustules, chlorosis, vein clearing, curling, insect bites, or dark fungal rot spots on pods).
