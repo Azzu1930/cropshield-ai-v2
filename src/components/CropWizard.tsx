@@ -131,6 +131,8 @@ export function CropWizard() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [imageValidationInfo, setImageValidationInfo] = useState<{ isValid: boolean; plantRatio?: number; skinRatio?: number } | null>(null);
+  const [hasVoiceInput, setHasVoiceInput] = useState<boolean>(false);
+  const autoAnalyzeTimerRef = useRef<any>(null);
 
   // Step 3: Symptoms (multi-select)
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
@@ -216,6 +218,16 @@ export function CropWizard() {
   };
 
   const handleVoiceExtracted = (data: ParsedSpeechData) => {
+    if (
+      data.crop ||
+      data.symptoms.length > 0 ||
+      data.affectedArea ||
+      data.durationDays ||
+      data.waterLevel ||
+      data.previousCrop
+    ) {
+      setHasVoiceInput(true);
+    }
     if (data.crop) {
       setSelectedCrop(data.crop);
     }
@@ -291,6 +303,14 @@ export function CropWizard() {
         });
         setPhotoError(null);
         setIsCompressing(false);
+
+        // If user provided input via voice assistant, auto-start AI analysis smoothly after preview
+        if (hasVoiceInput) {
+          if (autoAnalyzeTimerRef.current) clearTimeout(autoAnalyzeTimerRef.current);
+          autoAnalyzeTimerRef.current = setTimeout(() => {
+            executeAnalysis();
+          }, 1500);
+        }
       };
       tempImg.src = comp.dataUrl;
     } catch (err: any) {
@@ -302,6 +322,9 @@ export function CropWizard() {
 
   // Run Step 8 Animated Sequence & Submit to AI Analysis
   const executeAnalysis = async () => {
+    if (autoAnalyzeTimerRef.current) {
+      clearTimeout(autoAnalyzeTimerRef.current);
+    }
     setCurrentStep(8);
     setProgressStep(0);
     setAnalysisError(null);
@@ -480,6 +503,8 @@ export function CropWizard() {
         cropName={selectedCrop === 'Other' ? (customCrop || 'Crop') : selectedCrop}
         photoPreview={photoPreview}
         onReset={() => {
+          if (autoAnalyzeTimerRef.current) clearTimeout(autoAnalyzeTimerRef.current);
+          setHasVoiceInput(false);
           setCurrentStep(1);
           setPhotoPreview(null);
           setCompressedDataUrl(null);
@@ -640,6 +665,50 @@ export function CropWizard() {
                   <span>{t.wizard.rephoto}</span>
                 </button>
               </div>
+
+              {hasVoiceInput && (
+                <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl space-y-2.5 shadow-sm animate-in fade-in">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-emerald-950 font-extrabold text-sm">
+                      <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
+                      <span>
+                        {language === 'te'
+                          ? 'వాయిస్ ద్వారా వివరాలు నమోదయ్యాయి!'
+                          : language === 'hi'
+                          ? 'आवाज़ से विवरण दर्ज हो गए हैं!'
+                          : 'Details recorded via voice!'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                      {language === 'te' ? 'తక్షణ విశ్లేషణ' : language === 'hi' ? 'तुरंत विश्लेषण' : 'Instant AI'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-800 font-medium">
+                    {language === 'te'
+                      ? 'ఫోటో సిద్ధంగా ఉంది. AI విశ్లేషణ స్వయంచాలకంగా ప్రారంభమవుతుంది లేదా ఇప్పుడే బటన్ నొక్కండి:'
+                      : language === 'hi'
+                      ? 'फोटो तैयार है। AI विश्लेषण अपने आप शुरू हो रहा है या अभी बटन दबाएं:'
+                      : 'Photo ready. AI analysis is starting automatically, or tap now:'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (autoAnalyzeTimerRef.current) clearTimeout(autoAnalyzeTimerRef.current);
+                      executeAnalysis();
+                    }}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-extrabold text-sm shadow-md flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>
+                      {language === 'te'
+                        ? '⚡ తక్షణ AI విశ్లేషణ ప్రారంభించండి'
+                        : language === 'hi'
+                        ? '⚡ तुरंत AI विश्लेषण शुरू करें'
+                        : '⚡ Start Instant AI Analysis'}
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -702,20 +771,41 @@ export function CropWizard() {
           <div className="pt-4 flex items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setCurrentStep(1)}
+              onClick={() => {
+                if (autoAnalyzeTimerRef.current) clearTimeout(autoAnalyzeTimerRef.current);
+                setCurrentStep(1);
+              }}
               className="px-5 py-3 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
             >
               {t.wizard.buttons.back}
             </button>
-            <button
-              type="button"
-              disabled={!photoPreview || !compressedDataUrl || !!photoError || isCompressing}
-              onClick={() => setCurrentStep(3)}
-              className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm flex items-center gap-2 transition-colors"
-            >
-              <span>{t.wizard.buttons.next}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+
+            {hasVoiceInput ? (
+              <button
+                type="button"
+                disabled={!photoPreview || !compressedDataUrl || !!photoError || isCompressing}
+                onClick={() => {
+                  if (autoAnalyzeTimerRef.current) clearTimeout(autoAnalyzeTimerRef.current);
+                  executeAnalysis();
+                }}
+                className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm flex items-center gap-2 transition-colors"
+              >
+                <span>
+                  {language === 'te' ? 'విశ్లేషించండి' : language === 'hi' ? 'विश्लेषण करें' : 'Analyze Now'}
+                </span>
+                <Sparkles className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!photoPreview || !compressedDataUrl || !!photoError || isCompressing}
+                onClick={() => setCurrentStep(3)}
+                className="px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm flex items-center gap-2 transition-colors"
+              >
+                <span>{t.wizard.buttons.next}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -8,6 +8,7 @@ interface VoiceNarratorProps {
   text: string;
   label?: string;
   className?: string;
+  autoPlay?: boolean;
 }
 
 // Cleans markdown, technical symbols, and expands agricultural units for articulate speech synthesis
@@ -31,12 +32,13 @@ function cleanTextForSpeech(rawText: string): string {
     .trim();
 }
 
-export function VoiceNarrator({ text, label, className = '' }: VoiceNarratorProps) {
+export function VoiceNarrator({ text, label, className = '', autoPlay = false }: VoiceNarratorProps) {
   const { language, t } = useLanguage();
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const isCancelledRef = useRef(false);
+  const hasAutoPlayedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -107,15 +109,8 @@ export function VoiceNarrator({ text, label, className = '' }: VoiceNarratorProp
     return availableVoices.find((v) => v.lang.startsWith(lang)) || availableVoices[0] || null;
   };
 
-  const handleToggleVoice = () => {
+  const startSpeaking = () => {
     if (!isSupported || typeof window === 'undefined') return;
-
-    if (isSpeaking) {
-      isCancelledRef.current = true;
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
 
     window.speechSynthesis.cancel();
     isCancelledRef.current = false;
@@ -177,6 +172,32 @@ export function VoiceNarrator({ text, label, className = '' }: VoiceNarratorProp
 
     speakNext();
   };
+
+  const handleToggleVoice = () => {
+    if (!isSupported || typeof window === 'undefined') return;
+
+    if (isSpeaking) {
+      isCancelledRef.current = true;
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    startSpeaking();
+  };
+
+  useEffect(() => {
+    if (!autoPlay || hasAutoPlayedRef.current || !isSupported || !text) return;
+
+    const timer = setTimeout(() => {
+      if (!hasAutoPlayedRef.current && !isSpeaking) {
+        hasAutoPlayedRef.current = true;
+        startSpeaking();
+      }
+    }, 550);
+
+    return () => clearTimeout(timer);
+  }, [autoPlay, isSupported, text, availableVoices]);
 
   if (!isSupported) return null;
 

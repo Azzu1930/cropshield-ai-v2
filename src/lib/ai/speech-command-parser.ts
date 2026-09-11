@@ -360,52 +360,109 @@ export function parseAgriculturalSpeech(
     result.waterLevel = 'normal';
   }
 
+  // Leaf curl / virus / wrinkles
+  if (
+    text.includes('curl') ||
+    text.includes('curling') ||
+    text.includes('wrinkle') ||
+    text.includes('ముడత') ||
+    text.includes('ముడుచు') ||
+    text.includes('ఆకులు ముడుచు') ||
+    text.includes('मरोड़िया') ||
+    text.includes('पत्ती मुड़')
+  ) {
+    if (!result.symptoms.includes('wilting')) {
+      result.symptoms.push('wilting');
+    }
+  }
+
+  // Rust / reddish spots
+  if (
+    text.includes('rust') ||
+    text.includes('తుప్పు') ||
+    text.includes('ఎర్ర మచ్చ') ||
+    text.includes('రస్ట్') ||
+    text.includes('गेरुआ') ||
+    text.includes('जंग')
+  ) {
+    if (!result.symptoms.includes('brownSpots')) {
+      result.symptoms.push('brownSpots');
+    }
+  }
+
   // 6. PREVIOUS CROP
   if (
     text.includes('previous crop groundnut') ||
     text.includes('previous crop pulses') ||
     text.includes('previous pulses') ||
+    text.includes('after groundnut') ||
+    text.includes('after pulses') ||
     text.includes('gram') ||
     text.includes('soybean') ||
     text.includes('గతంలో పప్పు') ||
     text.includes('క్రితం పంట వేరుశనగ') ||
+    text.includes('వేరుశనగ తర్వాత') ||
+    text.includes('పప్పుల తర్వాత') ||
+    text.includes('శనగ తర్వాత') ||
     text.includes('శనగ') ||
     text.includes('సోయా') ||
     text.includes('पिछली फसल मूंगफली') ||
     text.includes('पिछली फसल दाल') ||
+    text.includes('मूंगफली के बाद') ||
     text.includes('चना')
   ) {
     result.previousCrop = 'Groundnut / Pulses (Gram, Soy)';
   } else if (
     text.includes('previous crop paddy') ||
     text.includes('previous crop rice') ||
+    text.includes('after paddy') ||
+    text.includes('after rice') ||
     text.includes('గతంలో వరి') ||
     text.includes('క్రితం పంట వరి') ||
+    text.includes('వరి తర్వాత') ||
+    text.includes('ముందు వరి') ||
+    text.includes('వరి వేశాం') ||
+    text.includes('వరి వేసాం') ||
     text.includes('पिछली फसल धान') ||
-    text.includes('पिछली फसल चावल')
+    text.includes('पिछली फसल चावल') ||
+    text.includes('धान के बाद') ||
+    text.includes('चावल के बाद')
   ) {
     result.previousCrop = 'Paddy / Rice';
   } else if (
     text.includes('previous crop cotton') ||
+    text.includes('after cotton') ||
     text.includes('గతంలో పత్తి') ||
     text.includes('క్రితం పంట పత్తి') ||
-    text.includes('पिछली फसल कपास')
+    text.includes('పత్తి తర్వాత') ||
+    text.includes('ముందు పత్తి') ||
+    text.includes('पिछली फसल कपास') ||
+    text.includes('कपास के बाद')
   ) {
     result.previousCrop = 'Cotton';
   } else if (
     text.includes('previous crop maize') ||
     text.includes('previous crop corn') ||
+    text.includes('after maize') ||
+    text.includes('after corn') ||
     text.includes('millet') ||
     text.includes('గతంలో మొక్కజొన్న') ||
+    text.includes('మొక్కజొన్న తర్వాత') ||
     text.includes('జొన్న') ||
     text.includes('पिछली फसल मक्का') ||
+    text.includes('मक्के के बाद') ||
     text.includes('ज्वार')
   ) {
     result.previousCrop = 'Maize / Millets';
   } else if (
     text.includes('previous crop vegetable') ||
+    text.includes('after vegetable') ||
     text.includes('గతంలో కూరగాయలు') ||
-    text.includes('पिछली फसल सब्जी')
+    text.includes('కూరగాయల తర్వాత') ||
+    text.includes('ముందు మిర్చి') ||
+    text.includes('ముందు టమోటా') ||
+    text.includes('पिछली फसल सब्जी') ||
+    text.includes('सब्जी के बाद')
   ) {
     result.previousCrop = 'Vegetables (Chilli, Tomato)';
   } else if (

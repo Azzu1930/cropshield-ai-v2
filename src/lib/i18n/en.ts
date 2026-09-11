@@ -184,6 +184,7 @@ export const en: TranslationDictionary = {
       micPermissionDenied: 'Microphone permission was denied. Please allow microphone access to speak.',
       notSupported: 'Live speech detection is not supported in this browser.',
       clickOrSpeakHelp: 'You can tap the microphone and speak freely instead of manual selection.',
+      doneSpeaking: 'Done Speaking',
     },
 
     water: {

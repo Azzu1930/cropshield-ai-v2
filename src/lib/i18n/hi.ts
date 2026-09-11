@@ -184,6 +184,7 @@ export const hi: TranslationDictionary = {
       micPermissionDenied: 'माइक की अनुमति नहीं मिली। बोलने के लिए कृपया माइक की अनुमति दें।',
       notSupported: 'इस ब्राउज़र में लाइव स्पीच सुविधा उपलब्ध नहीं है।',
       clickOrSpeakHelp: 'आप बटन दबाने के बजाय सीधे माइक पर बोलकर पूरी जानकारी भर सकते हैं।',
+      doneSpeaking: 'बोलना पूरा हुआ',
     },
 
     water: {

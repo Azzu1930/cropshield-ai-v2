@@ -267,8 +267,8 @@ export function SimpleResultView({ result, cropName, photoPreview, onReset }: Si
           <span>{t.wizard.buttons.back}</span>
         </button>
 
-        {/* 🔊 Listen Button (Browser Speech Synthesis) */}
-        <VoiceNarrator text={spokenText} label={t.result.listenResult} />
+        {/* 🔊 Listen Button (Browser Speech Synthesis with auto-play) */}
+        <VoiceNarrator text={spokenText} label={t.result.listenResult} autoPlay={true} />
       </div>
 
       {/* Main Diagnosis Card */}

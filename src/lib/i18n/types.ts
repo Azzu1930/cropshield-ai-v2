@@ -169,6 +169,7 @@ export interface TranslationDictionary {
       micPermissionDenied: string;
       notSupported: string;
       clickOrSpeakHelp: string;
+      doneSpeaking: string;
     };
 
     // Step 4 Water
